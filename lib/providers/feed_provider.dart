@@ -8,41 +8,27 @@ const _edgeFunctionUrl =
 const _anonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpucnpwdWF4enR1a2J3aWp2aHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzMTUyNTMsImV4cCI6MjA5NDg5MTI1M30.vSc8A93SYtDI3M7yPLe3mwSWF04j7FcRLsUj_CYiNYA';
 
-// キャッシュ（セッション中は再取得しない）
-final Map<String, List<VideoPost>> _cache = {};
+// キャッシュ（2分）
+List<VideoPost>? _cache;
 DateTime? _lastFetch;
 
-// 犬種URLからタグを正確に割り当て
+// 犬種タグ
 List<String> _dogTagsFromUrl(String url) {
   final lower = url.toLowerCase();
-  // ふわふわ系
   if (lower.contains('samoyed'))    return ['サモエド', 'ふわふわ', '白い'];
   if (lower.contains('pomeranian')) return ['ポメラニアン', 'ふわふわ', 'まん丸'];
   if (lower.contains('chow'))       return ['チャウチャウ', 'もふもふ', 'ふわふわ'];
-  if (lower.contains('keeshond'))   return ['ケースホンド', 'ふわふわ', 'もふもふ'];
-  if (lower.contains('borzoi'))     return ['ボルゾイ', 'おっとり', 'スリム'];
-  // 短毛系
   if (lower.contains('dalmatian')) return ['ダルメシアン', '水玉模様', 'スポーティ'];
   if (lower.contains('boxer'))     return ['ボクサー', 'がっしり', 'かっこいい'];
-  if (lower.contains('doberman'))  return ['ドーベルマン', 'かっこいい', 'スリム'];
-  if (lower.contains('vizsla'))    return ['ビズラ', 'おだやか', 'きれい'];
-  // コーギー・ウェルシュ
   if (lower.contains('corgi'))     return ['コーギー', '短足', 'かわいい'];
-  // 柴犬・秋田
   if (lower.contains('shiba'))     return ['柴犬', 'もふもふ', 'りりしい'];
   if (lower.contains('akita'))     return ['秋田犬', 'りりしい', 'もふもふ'];
-  // レトリーバー系
   if (lower.contains('retriever')) return ['レトリーバー', 'ゴールデン', 'おだやか'];
   if (lower.contains('labrador'))  return ['ラブラドール', 'やさしい', 'おだやか'];
-  // ハスキー
   if (lower.contains('husky'))     return ['ハスキー', '青い目', 'かっこいい'];
-  // プードル・マルチーズ
   if (lower.contains('poodle'))    return ['プードル', 'くるくる', 'かわいい'];
   if (lower.contains('maltese'))   return ['マルチーズ', 'ふわふわ', '白い'];
-  if (lower.contains('bichon'))    return ['ビションフリーゼ', 'もふもふ', '白い'];
-  // ビーグル
   if (lower.contains('beagle'))    return ['ビーグル', 'たれ耳', 'かわいい'];
-  // その他
   return ['犬', 'おだやか', 'かわいい'];
 }
 
@@ -59,155 +45,227 @@ const _typeMap = {
   AnimalType.seaCreature:  'mixed',
 };
 
-Future<List<VideoPost>> _fetchFromEdgeFunction({bool forceRefresh = false}) async {
-  // 5分以内のキャッシュがあれば再利用
+Future<List<VideoPost>> _fetchAll({bool forceRefresh = false}) async {
   final now = DateTime.now();
   if (!forceRefresh &&
+      _cache != null &&
+      _cache!.isNotEmpty &&
       _lastFetch != null &&
-      now.difference(_lastFetch!).inMinutes < 5 &&
-      _cache.isNotEmpty) {
-    final cached = _cache.values.expand((e) => e).toList()..shuffle();
-    return cached;
+      now.difference(_lastFetch!).inMinutes < 2) {
+    return [..._cache!]..shuffle();
   }
 
   final List<VideoPost> posts = [];
 
-  // Edge Function から並行取得（タイムアウト付き）
-  final futures = _typeMap.entries.map((e) => _fetchType(e.key, e.value));
-  final results = await Future.wait(futures, eagerError: false);
-  for (int i = 0; i < results.length; i++) {
-    final type = _typeMap.keys.elementAt(i);
-    _cache[type.name] = results[i];
-    posts.addAll(results[i]);
-  }
+  // 全ソースを並行取得
+  await Future.wait([
+    _fetchEdge(posts),
+    _fetchCatApi(posts),
+    _fetchCataas(posts),
+    _fetchDogApi(posts),
+    _fetchShibe(posts),
+    _fetchFox(posts),
+    _fetchGiphy(posts),
+  ]);
 
-  // Edge Function が全滅ならフォールバック
-  if (posts.length < 5) {
-    final fallback = await _fetchFallback();
-    posts.addAll(fallback);
-  }
+  if (posts.isEmpty) return [];
 
-  if (posts.isNotEmpty) _lastFetch = now;
+  // 重複除去
+  final seen = <String>{};
+  final unique = posts.where((p) => seen.add(p.id)).toList()..shuffle();
 
-  posts.shuffle();
-  return posts;
+  _cache = unique;
+  _lastFetch = now;
+  return unique;
 }
 
-Future<List<VideoPost>> _fetchType(AnimalType type, String typeStr) async {
+// Edge Function（Reddit + Giphy）
+Future<void> _fetchEdge(List<VideoPost> out) async {
+  try {
+    final futures = _typeMap.entries.map((e) => _fetchEdgeType(e.key, e.value));
+    final results = await Future.wait(futures, eagerError: false);
+    for (final r in results) out.addAll(r);
+  } catch (_) {}
+}
+
+Future<List<VideoPost>> _fetchEdgeType(AnimalType type, String typeStr) async {
   try {
     final res = await http.get(
-      Uri.parse('$_edgeFunctionUrl?type=$typeStr&limit=6'),
-      headers: {
-        'Authorization': 'Bearer $_anonKey',
-        'Content-Type': 'application/json',
-      },
-    ).timeout(const Duration(seconds: 10));
-
+      Uri.parse('$_edgeFunctionUrl?type=$typeStr&limit=8'),
+      headers: {'Authorization': 'Bearer $_anonKey'},
+    ).timeout(const Duration(seconds: 8));
     if (res.statusCode != 200) return [];
-
     final data = jsonDecode(res.body);
-    final List postList = data['posts'] ?? [];
-
-    return postList.map((p) => VideoPost(
-      id: p['id'] ?? '',
-      sourceUrl: p['sourceUrl'] ?? '',
-      thumbnailUrl: p['thumbnailUrl'] ?? '',
-      animalType: type,
+    final List posts = data['posts'] ?? [];
+    return posts.map((p) => VideoPost(
+      id: p['id'] ?? '', sourceUrl: p['sourceUrl'] ?? '',
+      thumbnailUrl: p['thumbnailUrl'] ?? '', animalType: type,
       tags: List<String>.from(p['tags'] ?? []),
       calmScore: (p['calmScore'] as num? ?? 0.8).toDouble(),
       soundLevel: (p['soundLevel'] as num? ?? 0.1).toDouble(),
-      mood: p['mood'] ?? 'healing',
+      mood: 'healing',
       hasSadContext: p['hasSadContext'] ?? false,
       isAsmr: p['isAsmr'] ?? false,
       isGif: p['isGif'] ?? false,
     )).toList();
-  } catch (_) {
-    return [];
+  } catch (_) { return []; }
+}
+
+// Cat API（最大20枚）
+Future<void> _fetchCatApi(List<VideoPost> out) async {
+  try {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final res = await http.get(Uri.parse(
+        'https://api.thecatapi.com/v1/images/search?limit=20&ts=$ts'));
+    if (res.statusCode != 200) return;
+    final List data = jsonDecode(res.body);
+    final catTags = ['寝顔', 'ゴロゴロ', 'おっとり', '甘え', 'まん丸', 'ふみふみ', 'おだやか'];
+    for (int i = 0; i < data.length; i++) {
+      out.add(VideoPost(
+        id: 'cat_${data[i]['id']}',
+        sourceUrl: data[i]['url'], thumbnailUrl: data[i]['url'],
+        animalType: AnimalType.cat,
+        tags: ['猫', catTags[i % catTags.length], 'もふもふ'],
+        calmScore: 0.82 + (i % 5) * 0.03,
+        soundLevel: 0.1, mood: 'healing',
+        isAsmr: i % 6 == 0,
+      ));
+    }
+  } catch (_) {}
+}
+
+// Cataas（GIF含む猫画像）
+Future<void> _fetchCataas(List<VideoPost> out) async {
+  final endpoints = [
+    ('https://cataas.com/cat?json=true', false),
+    ('https://cataas.com/cat/cute?json=true', false),
+    ('https://cataas.com/cat/sleeping?json=true', false),
+    ('https://cataas.com/cat/gif?json=true', true),
+  ];
+  for (int i = 0; i < endpoints.length; i++) {
+    try {
+      final res = await http.get(Uri.parse(endpoints[i].$1))
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode != 200) continue;
+      final data = jsonDecode(res.body);
+      final id = data['_id'] ?? 'cataas_$i';
+      out.add(VideoPost(
+        id: 'cataas_$id',
+        sourceUrl: 'https://cataas.com/cat/$id',
+        thumbnailUrl: 'https://cataas.com/cat/$id',
+        animalType: AnimalType.cat,
+        tags: const ['猫', 'おだやか', 'もふもふ'],
+        calmScore: 0.88, soundLevel: 0.05, mood: 'healing',
+        isGif: endpoints[i].$2,
+      ));
+    } catch (_) {}
   }
 }
 
-Future<List<VideoPost>> _fetchFallback() async {
-  final List<VideoPost> posts = [];
-  final ts = DateTime.now().millisecondsSinceEpoch;
+// Dog API（最大20枚）
+Future<void> _fetchDogApi(List<VideoPost> out) async {
+  try {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final res = await http.get(Uri.parse(
+        'https://dog.ceo/api/breeds/image/random/20?ts=$ts'));
+    if (res.statusCode != 200) return;
+    final List images = jsonDecode(res.body)['message'];
+    for (int i = 0; i < images.length; i++) {
+      out.add(VideoPost(
+        id: 'dog_${i}_$ts', sourceUrl: images[i], thumbnailUrl: images[i],
+        animalType: AnimalType.dog,
+        tags: _dogTagsFromUrl(images[i] as String),
+        calmScore: 0.80 + (i % 5) * 0.03,
+        soundLevel: 0.15, mood: 'healing',
+      ));
+    }
+  } catch (_) {}
+}
 
-  await Future.wait([
-    // 猫
-    () async {
-      try {
-        final res = await http.get(Uri.parse(
-            'https://api.thecatapi.com/v1/images/search?limit=10&ts=$ts'));
-        if (res.statusCode == 200) {
-          final List data = jsonDecode(res.body);
-          posts.addAll(data.map((d) => VideoPost(
-            id: 'cat_${d['id']}', sourceUrl: d['url'], thumbnailUrl: d['url'],
-            animalType: AnimalType.cat,
-            tags: const ['猫', 'もふもふ', 'おだやか'],
-            calmScore: 0.85, soundLevel: 0.1, mood: 'healing',
-          )));
-        }
-      } catch (_) {}
-    }(),
-    // 犬
-    () async {
-      try {
-        final res = await http.get(Uri.parse(
-            'https://dog.ceo/api/breeds/image/random/8?ts=$ts'));
-        if (res.statusCode == 200) {
-          final List images = jsonDecode(res.body)['message'];
-          posts.addAll(images.asMap().entries.map((e) => VideoPost(
-            id: 'dog_${e.key}_$ts', sourceUrl: e.value, thumbnailUrl: e.value,
-            animalType: AnimalType.dog,
-            tags: _dogTagsFromUrl(e.value as String),
-            calmScore: 0.82, soundLevel: 0.15, mood: 'healing',
-          )));
-        }
-      } catch (_) {}
-    }(),
-    // 柴犬
-    () async {
-      try {
-        final res = await http.get(Uri.parse('https://shibe.online/api/shibes?count=6'));
-        if (res.statusCode == 200) {
-          final List images = jsonDecode(res.body);
-          posts.addAll(images.asMap().entries.map((e) => VideoPost(
-            id: 'shibe_${e.key}', sourceUrl: e.value, thumbnailUrl: e.value,
-            animalType: AnimalType.dog,
-            tags: const ['柴犬', 'もふもふ', 'おだやか'],
-            calmScore: 0.90, soundLevel: 0.05, mood: 'healing',
-          )));
-        }
-      } catch (_) {}
-    }(),
-    // キツネ
-    () async {
-      try {
-        for (int i = 0; i < 3; i++) {
-          final res = await http.get(Uri.parse('https://randomfox.ca/floof/'));
-          if (res.statusCode == 200) {
-            final data = jsonDecode(res.body);
-            posts.add(VideoPost(
-              id: 'fox_$i', sourceUrl: data['image'], thumbnailUrl: data['image'],
-              animalType: AnimalType.smallAnimal,
-              tags: const ['キツネ', 'ふわふわ', 'おだやか'],
-              calmScore: 0.88, soundLevel: 0.05, mood: 'healing',
-            ));
-          }
-        }
-      } catch (_) {}
-    }(),
-  ].map((f) => f));
+// Shibe（柴犬 10枚）
+Future<void> _fetchShibe(List<VideoPost> out) async {
+  try {
+    final res = await http.get(Uri.parse('https://shibe.online/api/shibes?count=10'));
+    if (res.statusCode != 200) return;
+    final List images = jsonDecode(res.body);
+    for (int i = 0; i < images.length; i++) {
+      out.add(VideoPost(
+        id: 'shibe_$i', sourceUrl: images[i], thumbnailUrl: images[i],
+        animalType: AnimalType.dog,
+        tags: const ['柴犬', 'もふもふ', 'りりしい'],
+        calmScore: 0.90, soundLevel: 0.05, mood: 'healing',
+      ));
+    }
+  } catch (_) {}
+}
 
-  return posts;
+// RandomFox（キツネ）
+Future<void> _fetchFox(List<VideoPost> out) async {
+  final futures = List.generate(5, (_) async {
+    try {
+      final res = await http.get(Uri.parse('https://randomfox.ca/floof/'));
+      if (res.statusCode != 200) return;
+      final data = jsonDecode(res.body);
+      out.add(VideoPost(
+        id: 'fox_${DateTime.now().microsecondsSinceEpoch}',
+        sourceUrl: data['image'], thumbnailUrl: data['image'],
+        animalType: AnimalType.smallAnimal,
+        tags: const ['キツネ', 'ふわふわ', 'おだやか'],
+        calmScore: 0.88, soundLevel: 0.05, mood: 'healing',
+      ));
+    } catch (_) {}
+  });
+  await Future.wait(futures);
+}
+
+// Giphy（直接取得・CORS対応）
+Future<void> _fetchGiphy(List<VideoPost> out) async {
+  const giphyKey = 'dc6zaTOxFJmzC';
+  const searches = [
+    ('cute cat sleeping', AnimalType.cat, ['猫', 'GIF', 'ねむい']),
+    ('fluffy dog', AnimalType.dog, ['犬', 'GIF', 'ふわふわ']),
+    ('otter cute', AnimalType.otter, ['カワウソ', 'GIF', 'かわいい']),
+    ('capybara', AnimalType.capybara, ['カピバラ', 'GIF', 'まったり']),
+    ('bunny rabbit cute', AnimalType.smallAnimal, ['うさぎ', 'GIF', 'もふもふ']),
+    ('hamster cute', AnimalType.smallAnimal, ['ハムスター', 'GIF', 'まん丸']),
+    ('cute bird', AnimalType.bird, ['鳥', 'GIF', 'かわいい']),
+    ('baby animal', AnimalType.babyAnimal, ['赤ちゃん動物', 'GIF', 'ちいさい']),
+  ];
+
+  final futures = searches.map((s) async {
+    try {
+      final url = 'https://api.giphy.com/v1/gifs/search?api_key=$giphyKey'
+          '&q=${Uri.encodeComponent(s.$1)}&limit=5&rating=g';
+      final res = await http.get(Uri.parse(url))
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode != 200) return;
+      final data = jsonDecode(res.body);
+      final List gifs = data['data'] ?? [];
+      for (int i = 0; i < gifs.length; i++) {
+        final gifUrl = gifs[i]['images']?['fixed_height']?['url'] ?? '';
+        if (gifUrl.isEmpty) continue;
+        out.add(VideoPost(
+          id: 'giphy_${s.$1.replaceAll(' ', '_')}_$i',
+          sourceUrl: 'https://giphy.com',
+          thumbnailUrl: gifUrl,
+          animalType: s.$2,
+          tags: s.$3,
+          calmScore: 0.85, soundLevel: 0.05, mood: 'healing',
+          isGif: true,
+        ));
+      }
+    } catch (_) {}
+  });
+  await Future.wait(futures);
 }
 
 class FeedNotifier extends AsyncNotifier<List<VideoPost>> {
   @override
-  Future<List<VideoPost>> build() async => _fetchFromEdgeFunction();
+  Future<List<VideoPost>> build() async => _fetchAll();
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-        () => _fetchFromEdgeFunction(forceRefresh: true));
+    state = await AsyncValue.guard(() => _fetchAll(forceRefresh: true));
   }
 }
 

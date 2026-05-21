@@ -20,29 +20,32 @@ class DetailScreen extends ConsumerWidget {
     final isFav = ref.watch(favoritesProvider).valueOrNull?.contains(post.id) ?? false;
     final isYoutube = post.youtubeVideoId != null;
 
+    // YouTube の場合は AppBar なし（iframe が Flutter canvas を覆うため）
+    // ✕ ボタンは iframe の下のパネルに配置
+    if (isYoutube) {
+      return _buildYoutubeLayout(context, ref, isFav);
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
-      // YouTube のときは AppBar をボディに重ねない（iframe と被らせない）
-      extendBodyBehindAppBar: !isYoutube,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: isYoutube ? Colors.black : Colors.transparent,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         toolbarHeight: 56,
-        // ✕ 閉じるボタン：タップ領域を広く取る
         leading: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isYoutube ? Colors.white12 : Colors.black54,
+            decoration: const BoxDecoration(
+              color: Colors.black54,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.close, color: Colors.white, size: 22),
           ),
         ),
         actions: [
-          // シェア
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => sharePost(
@@ -53,8 +56,8 @@ class DetailScreen extends ConsumerWidget {
             child: Container(
               margin: const EdgeInsets.all(8),
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isYoutube ? Colors.white12 : Colors.black54,
+              decoration: const BoxDecoration(
+                color: Colors.black54,
                 shape: BoxShape.circle,
               ),
               child: const Text('📤', style: TextStyle(fontSize: 16)),
@@ -65,113 +68,161 @@ class DetailScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // 動画 or 画像（ヒーロー）
           Expanded(
-            child: isYoutube
-                ? YouTubePlayer(videoId: post.youtubeVideoId!)
-                : Hero(
-                    tag: 'post_${post.id}',
-                    child: InteractiveViewer(
-                      child: CachedNetworkImage(
-                        imageUrl: post.thumbnailUrl,
-                        fit: BoxFit.contain,
-                        placeholder: (_, __) => const Center(
-                          child: Text('🐾', style: TextStyle(fontSize: 56)),
-                        ),
-                        errorWidget: (_, __, ___) => const Center(
-                          child: Text('🐾', style: TextStyle(fontSize: 56)),
-                        ),
-                      ),
+            child: Hero(
+              tag: 'post_${post.id}',
+              child: InteractiveViewer(
+                child: CachedNetworkImage(
+                  imageUrl: post.thumbnailUrl,
+                  fit: BoxFit.contain,
+                  placeholder: (_, __) => const Center(
+                    child: Text('🐾', style: TextStyle(fontSize: 56)),
+                  ),
+                  errorWidget: (_, __, ___) => const Center(
+                    child: Text('🐾', style: TextStyle(fontSize: 56)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _buildBottomPanel(context, ref, isFav, isYoutube: false),
+        ],
+      ),
+    );
+  }
+
+  // YouTube 専用レイアウト（AppBar なし・✕ボタンを下に配置）
+  Widget _buildYoutubeLayout(BuildContext context, WidgetRef ref, bool isFav) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // YouTube iframe（上部いっぱい）
+            Expanded(
+              child: YouTubePlayer(videoId: post.youtubeVideoId!),
+            ),
+            // 下部パネル（✕ボタンをここに配置）
+            _buildBottomPanel(context, ref, isFav, isYoutube: true),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomPanel(
+    BuildContext context,
+    WidgetRef ref,
+    bool isFav, {
+    required bool isYoutube,
+  }) {
+    return Container(
+      color: const Color(0xFF1A1410),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Calm Score + タグ行
+          Row(
+            children: [
+              CalmScoreBadge(score: post.calmScore),
+              if (post.isAsmr) ...[
+                const SizedBox(width: 8),
+                _darkBadge('🎵 ASMR'),
+              ],
+              const Spacer(),
+              Text(
+                _animalLabel(post.animalType),
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // タグ
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: post.tags.map((t) => _tagChip('#$t')).toList(),
+          ),
+          const SizedBox(height: 16),
+
+          // アクションボタン行
+          Row(
+            children: [
+              // YouTube のときは ✕ 閉じるボタンを左端に大きく表示
+              if (isYoutube) ...[
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.close, color: Colors.white70, size: 18),
+                        SizedBox(width: 4),
+                        Text('閉じる',
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: 13)),
+                      ],
                     ),
                   ),
-          ),
-
-          // 下部パネル
-          Container(
-            color: const Color(0xFF1A1410),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Calm Score + タグ行
-                Row(
-                  children: [
-                    CalmScoreBadge(score: post.calmScore),
-                    if (post.isAsmr) ...[
-                      const SizedBox(width: 8),
-                      _darkBadge('🎵 ASMR'),
-                    ],
-                    const Spacer(),
-                    Text(
-                      _animalLabel(post.animalType),
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 12),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 12),
-
-                // タグ
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: post.tags
-                      .map((t) => _tagChip('#$t'))
-                      .toList(),
-                ),
-                const SizedBox(height: 20),
-
-                // アクションボタン行
-                Row(
-                  children: [
-                    // ❤️ お気に入り
-                    _ActionButton(
-                      emoji: isFav ? '❤️' : '♡',
-                      label: isFav ? '保存済み' : 'お気に入り',
-                      onTap: () {
-                        ref.read(favoritesProvider.notifier).toggle(post.id);
-                      },
-                    ),
-                    const SizedBox(width: 12),
-
-                    // 🌿 苦手
-                    _ActionButton(
-                      emoji: '🌿',
-                      label: '苦手',
-                      onTap: () {
-                        ref.read(dislikeProvider.notifier)
-                            .dislike(post.id, post.tags);
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('覚えたよ。次から表示しないね 🌿'),
-                            backgroundColor: MofuColors.mossGreen,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    const Spacer(),
-
-                    // 元投稿を開く
-                    TextButton(
-                      onPressed: () => launchUrl(
-                        Uri.parse(post.sourceUrl),
-                        mode: LaunchMode.externalApplication,
-                      ),
-                      child: Text(
-                        post.youtubeVideoId != null ? 'YouTubeで見る →' : '元投稿 →',
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(width: 8),
               ],
-            ),
+
+              // ❤️ お気に入り
+              _ActionButton(
+                emoji: isFav ? '❤️' : '♡',
+                label: isFav ? '保存済み' : 'お気に入り',
+                onTap: () =>
+                    ref.read(favoritesProvider.notifier).toggle(post.id),
+              ),
+              const SizedBox(width: 8),
+
+              // 🌿 苦手
+              _ActionButton(
+                emoji: '🌿',
+                label: '苦手',
+                onTap: () {
+                  ref
+                      .read(dislikeProvider.notifier)
+                      .dislike(post.id, post.tags);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('覚えたよ。次から表示しないね 🌿'),
+                      backgroundColor: MofuColors.mossGreen,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+              const Spacer(),
+
+              // 元投稿 / YouTubeで見る
+              TextButton(
+                onPressed: () => launchUrl(
+                  Uri.parse(post.sourceUrl),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: Text(
+                  isYoutube ? 'YouTube →' : '元投稿 →',
+                  style: const TextStyle(
+                      color: Colors.white38, fontSize: 12),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/video_post.dart';
 import '../theme/app_theme.dart';
 import '../utils/share_utils.dart';
@@ -24,7 +25,12 @@ class VideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: post.youtubeVideoId != null
+          ? () => launchUrl(
+                Uri.parse('https://youtu.be/${post.youtubeVideoId}'),
+                mode: LaunchMode.externalApplication,
+              )
+          : onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -80,7 +86,27 @@ class VideoCard extends StatelessWidget {
             child: CalmScoreBadge(score: post.calmScore),
           ),
           // ASMRバッジ（右上）
-          if (post.isGif)
+          // YouTube再生ボタン（中央）
+          if (post.youtubeVideoId != null)
+            Positioned.fill(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.play_arrow,
+                      color: Colors.white, size: 36),
+                ),
+              ),
+            ),
+          if (post.youtubeVideoId != null)
+            Positioned(
+              top: 12, right: 12,
+              child: _badge('▶ YouTube', const Color(0xFFFF0000)),
+            )
+          else if (post.isGif)
             Positioned(
               top: 12, right: 12,
               child: _badge('GIF', const Color(0xFF9C6FD6)),

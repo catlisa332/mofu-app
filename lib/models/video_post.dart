@@ -19,6 +19,7 @@ class VideoPost {
   final String mood;
   final bool isAsmr;
   final bool isGif;
+  final String? youtubeVideoId; // YouTube動画ID
   final bool hasLoudSounds;
   final bool hasSuddenCuts;
   final bool hasSadContext;
@@ -36,6 +37,7 @@ class VideoPost {
     required this.mood,
     this.isAsmr = false,
     this.isGif = false,
+    this.youtubeVideoId,
     this.hasLoudSounds = false,
     this.hasSuddenCuts = false,
     this.hasSadContext = false,

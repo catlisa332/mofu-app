@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../models/video_post.dart';
+import '../services/youtube_service.dart';
 
 const _edgeFunctionUrl =
     'https://jnrzpuaxztukbwijvhyq.supabase.co/functions/v1/animal-feed';
@@ -66,6 +67,7 @@ Future<List<VideoPost>> _fetchAll({bool forceRefresh = false}) async {
     _fetchShibe(posts),
     _fetchFox(posts),
     _fetchGiphy(posts),
+    _fetchYouTube(posts),
   ]);
 
   if (posts.isEmpty) return [];
@@ -267,6 +269,14 @@ class FeedNotifier extends AsyncNotifier<List<VideoPost>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetchAll(forceRefresh: true));
   }
+}
+
+// YouTube取得
+Future<void> _fetchYouTube(List<VideoPost> out) async {
+  try {
+    final videos = await fetchYouTubeVideos(perQuery: 2);
+    out.addAll(videos);
+  } catch (_) {}
 }
 
 final feedProvider =

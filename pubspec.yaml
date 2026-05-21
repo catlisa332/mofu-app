@@ -29,6 +29,12 @@ dependencies:
   # Web APIs
   web: ^1.1.0
 
+  # Cross-platform share
+  share_plus: ^10.0.0
+
+  # Cross-platform connectivity
+  connectivity_plus: ^6.0.3
+
   # Video
   video_player: ^2.8.3
 

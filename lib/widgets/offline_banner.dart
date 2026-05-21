@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:js_interop';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:web/web.dart' as web;
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class OfflineBanner extends StatefulWidget {
   final Widget child;
@@ -13,26 +13,29 @@ class OfflineBanner extends StatefulWidget {
 
 class _OfflineBannerState extends State<OfflineBanner> {
   bool _isOffline = false;
-  Timer? _timer;
+  StreamSubscription? _sub;
 
   @override
   void initState() {
     super.initState();
     _check();
-    // 5秒ごとにオフライン状態を確認
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _check());
+    _sub = Connectivity().onConnectivityChanged.listen((results) {
+      final offline = results.every((r) => r == ConnectivityResult.none);
+      if (offline != _isOffline && mounted) {
+        setState(() => _isOffline = offline);
+      }
+    });
   }
 
-  void _check() {
-    final offline = !web.window.navigator.onLine;
-    if (offline != _isOffline && mounted) {
-      setState(() => _isOffline = offline);
-    }
+  Future<void> _check() async {
+    final results = await Connectivity().checkConnectivity();
+    final offline = results.every((r) => r == ConnectivityResult.none);
+    if (mounted) setState(() => _isOffline = offline);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _sub?.cancel();
     super.dispose();
   }
 
@@ -47,7 +50,7 @@ class _OfflineBannerState extends State<OfflineBanner> {
           child: _isOffline
               ? const Center(
                   child: Text(
-                    '📡 オフラインです。画像が表示されない場合があります',
+                    'オフラインです。画像が表示されない場合があります',
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 )

@@ -18,6 +18,7 @@ class VideoPost {
   final double soundLevel;
   final String mood;
   final bool isAsmr;
+  final bool isGif;
   final bool hasLoudSounds;
   final bool hasSuddenCuts;
   final bool hasSadContext;
@@ -34,6 +35,7 @@ class VideoPost {
     required this.soundLevel,
     required this.mood,
     this.isAsmr = false,
+    this.isGif = false,
     this.hasLoudSounds = false,
     this.hasSuddenCuts = false,
     this.hasSadContext = false,

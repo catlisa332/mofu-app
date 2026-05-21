@@ -80,7 +80,12 @@ class VideoCard extends StatelessWidget {
             child: CalmScoreBadge(score: post.calmScore),
           ),
           // ASMRバッジ（右上）
-          if (post.isAsmr)
+          if (post.isGif)
+            Positioned(
+              top: 12, right: 12,
+              child: _badge('GIF', const Color(0xFF9C6FD6)),
+            )
+          else if (post.isAsmr)
             Positioned(
               top: 12, right: 12,
               child: _badge('🎵 ASMR', MofuColors.mossGreen),

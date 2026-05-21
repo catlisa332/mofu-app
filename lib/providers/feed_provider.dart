@@ -85,6 +85,7 @@ Future<List<VideoPost>> _fetchType(AnimalType type, String typeStr) async {
       mood: p['mood'] ?? 'healing',
       hasSadContext: p['hasSadContext'] ?? false,
       isAsmr: p['isAsmr'] ?? false,
+      isGif: p['isGif'] ?? false,
     )).toList();
   } catch (_) {
     return [];

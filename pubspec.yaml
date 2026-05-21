@@ -1,0 +1,46 @@
+name: mofu_app
+description: MOFU - 癒し特化・安心設計動物フィードアプリ
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # UI
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.3.1
+
+  # Local storage
+  shared_preferences: ^2.2.3
+
+  # HTTP
+  http: ^1.2.1
+
+  # Web APIs
+  web: ^1.1.0
+
+  # Video
+  video_player: ^2.8.3
+
+  # Backend
+  supabase_flutter: ^2.3.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

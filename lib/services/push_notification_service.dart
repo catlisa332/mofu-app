@@ -1,37 +1,49 @@
 import 'dart:js_interop';
 import 'package:web/web.dart' as web;
 
-const _vapidPublicKey =
-    'BJMyplzdiS9A4cgRAiVKUL2EX5wxe_R2nVT9Z_3ePrqijNOT8hLgwWMTICUSZoZGF-shtl-RDBZr4xDHLx6Ynic';
+@JS('Notification.permission')
+external JSString? get _notificationPermission;
+
+@JS('Notification.requestPermission')
+external JSPromise<JSString> _requestPermission();
+
+@JS('typeof Notification')
+external JSString get _notificationType;
 
 class PushNotificationService {
-  static bool get isSupported =>
-      web.window.has('Notification') && web.window.has('serviceWorker');
+  static bool get isSupported {
+    try {
+      return _notificationType.toDart != 'undefined';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static String get permissionStatus {
+    try {
+      return _notificationPermission?.toDart ?? 'default';
+    } catch (_) {
+      return 'default';
+    }
+  }
+
+  static bool get isGranted => permissionStatus == 'granted';
 
   static Future<bool> requestPermission() async {
     if (!isSupported) return false;
     try {
-      final permission =
-          await web.window.Notification.requestPermission().toDart;
-      return permission == 'granted';
+      final result = await _requestPermission().toDart;
+      return result.toDart == 'granted';
     } catch (_) {
       return false;
     }
   }
 
   static Future<void> registerServiceWorker() async {
-    if (!isSupported) return;
     try {
       await web.window.navigator.serviceWorker
-          .register('/mofu-app/mofu-sw.js')
+          .register('/mofu-app/mofu-sw.js'.toJS)
           .toDart;
     } catch (_) {}
   }
-
-  static String get permissionStatus {
-    if (!isSupported) return 'unsupported';
-    return web.window.Notification.permission;
-  }
-
-  static bool get isGranted => permissionStatus == 'granted';
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/video_post.dart';
 import '../theme/app_theme.dart';
 import '../utils/share_utils.dart';
@@ -25,12 +24,7 @@ class VideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: post.youtubeVideoId != null
-          ? () => launchUrl(
-                Uri.parse('https://youtu.be/${post.youtubeVideoId}'),
-                mode: LaunchMode.externalApplication,
-              )
-          : onTap,
+      onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(

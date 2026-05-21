@@ -1,12 +1,14 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/video_post.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/dislike_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/share_utils.dart';
 import '../../widgets/calm_score_badge.dart';
+import '../../widgets/youtube_player.dart';
 
 class DetailScreen extends ConsumerWidget {
   final VideoPost post;
@@ -55,23 +57,25 @@ class DetailScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // 画像（ヒーロー）
+          // 動画 or 画像（ヒーロー）
           Expanded(
-            child: Hero(
-              tag: 'post_${post.id}',
-              child: InteractiveViewer(
-                child: CachedNetworkImage(
-                  imageUrl: post.thumbnailUrl,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => const Center(
-                    child: Text('🐾', style: TextStyle(fontSize: 56)),
+            child: post.youtubeVideoId != null
+                ? YouTubePlayer(videoId: post.youtubeVideoId!)
+                : Hero(
+                    tag: 'post_${post.id}',
+                    child: InteractiveViewer(
+                      child: CachedNetworkImage(
+                        imageUrl: post.thumbnailUrl,
+                        fit: BoxFit.contain,
+                        placeholder: (_, __) => const Center(
+                          child: Text('🐾', style: TextStyle(fontSize: 56)),
+                        ),
+                        errorWidget: (_, __, ___) => const Center(
+                          child: Text('🐾', style: TextStyle(fontSize: 56)),
+                        ),
+                      ),
+                    ),
                   ),
-                  errorWidget: (_, __, ___) => const Center(
-                    child: Text('🐾', style: TextStyle(fontSize: 56)),
-                  ),
-                ),
-              ),
-            ),
           ),
 
           // 下部パネル
@@ -146,14 +150,13 @@ class DetailScreen extends ConsumerWidget {
 
                     // 元投稿を開く
                     TextButton(
-                      onPressed: () => sharePost(
-                        context: context,
-                        url: post.sourceUrl,
-                        title: '元投稿を見る',
+                      onPressed: () => launchUrl(
+                        Uri.parse(post.sourceUrl),
+                        mode: LaunchMode.externalApplication,
                       ),
-                      child: const Text(
-                        '元投稿 →',
-                        style: TextStyle(
+                      child: Text(
+                        post.youtubeVideoId != null ? 'YouTubeで見る →' : '元投稿 →',
+                        style: const TextStyle(
                             color: Colors.white38, fontSize: 12),
                       ),
                     ),

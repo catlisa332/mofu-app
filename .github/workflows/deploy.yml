@@ -27,7 +27,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href "/mofu-app/"
+        run: flutter build web --release --base-href "/mofu-app/" --dart-define=YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/video_post.dart';
 
-const _apiKey = 'AIzaSyCxSHMioA2ecYOwbOGfLQL1wmFrCrW8Y1Y';
+// ビルド時に --dart-define=YOUTUBE_API_KEY=xxx で注入
+const _apiKey = String.fromEnvironment('YOUTUBE_API_KEY', defaultValue: '');
 const _baseUrl = 'https://www.googleapis.com/youtube/v3';
 
 // 動物種別ごとの検索クエリ

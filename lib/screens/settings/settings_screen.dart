@@ -6,6 +6,7 @@ import '../../models/user_preferences.dart';
 import '../../models/video_post.dart';
 import '../../providers/learning_provider.dart';
 import '../../providers/preferences_provider.dart';
+import '../../services/push_notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../auth/auth_screen.dart';
 
@@ -96,6 +97,39 @@ class SettingsScreen extends ConsumerWidget {
                 onChanged: (v) => ref
                     .read(preferencesProvider.notifier)
                     .save(prefs.copyWith(isMutePreferred: v)),
+              ),
+            ]),
+            const SizedBox(height: 16),
+
+            // 通知
+            _section('通知', [
+              ListTile(
+                leading: const Text('🔔', style: TextStyle(fontSize: 20)),
+                title: const Text('今日のモフ通知'),
+                subtitle: const Text('毎日かわいい動物をお知らせ'),
+                trailing: PushNotificationService.isGranted
+                    ? const Text('ON',
+                        style: TextStyle(
+                            color: MofuColors.mossGreen,
+                            fontWeight: FontWeight.w600))
+                    : const Text('OFF',
+                        style: TextStyle(color: MofuColors.textLight)),
+                onTap: () async {
+                  await PushNotificationService.registerServiceWorker();
+                  final granted =
+                      await PushNotificationService.requestPermission();
+                  if (granted && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('通知をONにしたよ 🐾'),
+                        backgroundColor: MofuColors.mossGreen,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    );
+                  }
+                },
               ),
             ]),
             const SizedBox(height: 16),

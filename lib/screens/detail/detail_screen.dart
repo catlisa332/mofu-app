@@ -18,48 +18,56 @@ class DetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isFav = ref.watch(favoritesProvider).valueOrNull?.contains(post.id) ?? false;
+    final isYoutube = post.youtubeVideoId != null;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
+      // YouTube のときは AppBar をボディに重ねない（iframe と被らせない）
+      extendBodyBehindAppBar: !isYoutube,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: isYoutube ? Colors.black : Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
+        toolbarHeight: 56,
+        // ✕ 閉じるボタン：タップ領域を広く取る
+        leading: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.of(context).pop(),
+          child: Container(
+            margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black38,
+              color: isYoutube ? Colors.white12 : Colors.black54,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.close, color: Colors.white, size: 20),
+            child: const Icon(Icons.close, color: Colors.white, size: 22),
           ),
-          onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           // シェア
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.black38,
-                shape: BoxShape.circle,
-              ),
-              child: const Text('📤', style: TextStyle(fontSize: 16)),
-            ),
-            onPressed: () => sharePost(
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => sharePost(
               context: context,
               url: post.sourceUrl,
               title: post.tags.take(2).join(' '),
             ),
+            child: Container(
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isYoutube ? Colors.white12 : Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: const Text('📤', style: TextStyle(fontSize: 16)),
+            ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
           // 動画 or 画像（ヒーロー）
           Expanded(
-            child: post.youtubeVideoId != null
+            child: isYoutube
                 ? YouTubePlayer(videoId: post.youtubeVideoId!)
                 : Hero(
                     tag: 'post_${post.id}',

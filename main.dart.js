@@ -30115,7 +30115,7 @@ aLf(a,b,c,d){return A.beh(a,b,c,d)},
 beh(a,b,c,d){var s=0,r=A.r(t.L3),q,p=2,o=[],n,m,l,k,j,i,h,g
 var $async$aLf=A.n(function(e,f){if(e===1){o.push(f)
 s=p}for(;;)switch(s){case 0:p=4
-n=A.bL("https://www.googleapis.com/youtube/v3/search",0,null).qZ(A.ah(["part","snippet","q",c,"type","video","videoDuration","short","videoEmbeddable","true","safeSearch","strict","maxResults",B.e.j(b),"relevanceLanguage","ja","key","AIzaSyCxSHMioA2ecYOwbOGfLQL1wmFrCrW8Y1Y"],t.N,t.z))
+n=A.bL("https://www.googleapis.com/youtube/v3/search",0,null).qZ(A.ah(["part","snippet","q",c,"type","video","videoDuration","short","videoEmbeddable","true","safeSearch","strict","maxResults",B.e.j(b),"relevanceLanguage","ja","key",""],t.N,t.z))
 s=7
 return A.m(A.qx(n,null).r5(B.pL),$async$aLf)
 case 7:m=f

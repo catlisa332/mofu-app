@@ -12,6 +12,40 @@ const _anonKey =
 final Map<String, List<VideoPost>> _cache = {};
 DateTime? _lastFetch;
 
+// 犬種URLからタグを正確に割り当て
+List<String> _dogTagsFromUrl(String url) {
+  final lower = url.toLowerCase();
+  // ふわふわ系
+  if (lower.contains('samoyed'))    return ['サモエド', 'ふわふわ', '白い'];
+  if (lower.contains('pomeranian')) return ['ポメラニアン', 'ふわふわ', 'まん丸'];
+  if (lower.contains('chow'))       return ['チャウチャウ', 'もふもふ', 'ふわふわ'];
+  if (lower.contains('keeshond'))   return ['ケースホンド', 'ふわふわ', 'もふもふ'];
+  if (lower.contains('borzoi'))     return ['ボルゾイ', 'おっとり', 'スリム'];
+  // 短毛系
+  if (lower.contains('dalmatian')) return ['ダルメシアン', '水玉模様', 'スポーティ'];
+  if (lower.contains('boxer'))     return ['ボクサー', 'がっしり', 'かっこいい'];
+  if (lower.contains('doberman'))  return ['ドーベルマン', 'かっこいい', 'スリム'];
+  if (lower.contains('vizsla'))    return ['ビズラ', 'おだやか', 'きれい'];
+  // コーギー・ウェルシュ
+  if (lower.contains('corgi'))     return ['コーギー', '短足', 'かわいい'];
+  // 柴犬・秋田
+  if (lower.contains('shiba'))     return ['柴犬', 'もふもふ', 'りりしい'];
+  if (lower.contains('akita'))     return ['秋田犬', 'りりしい', 'もふもふ'];
+  // レトリーバー系
+  if (lower.contains('retriever')) return ['レトリーバー', 'ゴールデン', 'おだやか'];
+  if (lower.contains('labrador'))  return ['ラブラドール', 'やさしい', 'おだやか'];
+  // ハスキー
+  if (lower.contains('husky'))     return ['ハスキー', '青い目', 'かっこいい'];
+  // プードル・マルチーズ
+  if (lower.contains('poodle'))    return ['プードル', 'くるくる', 'かわいい'];
+  if (lower.contains('maltese'))   return ['マルチーズ', 'ふわふわ', '白い'];
+  if (lower.contains('bichon'))    return ['ビションフリーゼ', 'もふもふ', '白い'];
+  // ビーグル
+  if (lower.contains('beagle'))    return ['ビーグル', 'たれ耳', 'かわいい'];
+  // その他
+  return ['犬', 'おだやか', 'かわいい'];
+}
+
 const _typeMap = {
   AnimalType.cat:          'cat',
   AnimalType.dog:          'dog',
@@ -123,7 +157,7 @@ Future<List<VideoPost>> _fetchFallback() async {
           posts.addAll(images.asMap().entries.map((e) => VideoPost(
             id: 'dog_${e.key}_$ts', sourceUrl: e.value, thumbnailUrl: e.value,
             animalType: AnimalType.dog,
-            tags: const ['犬', 'しあわせ', 'ふわふわ'],
+            tags: _dogTagsFromUrl(e.value as String),
             calmScore: 0.82, soundLevel: 0.15, mood: 'healing',
           )));
         }

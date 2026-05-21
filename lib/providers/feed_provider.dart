@@ -33,6 +33,24 @@ List<String> _dogTagsFromUrl(String url) {
   return ['犬', 'おだやか', 'かわいい'];
 }
 
+// 低解像度URLを弾くフィルター
+bool _isHighQualityUrl(String url) {
+  if (url.isEmpty) return false;
+  final lower = url.toLowerCase();
+  // 明らかに小さいサイズを示すパターンを除外
+  final badPatterns = [
+    '_t.jpg', '_t.jpeg', '_t.png',     // thumbnail suffix
+    '/thumb/', '/thumbnail/', '/small/',
+    '50x50', '60x60', '75x75', '100x', '120x',
+    'width=50', 'width=60', 'width=75', 'width=100',
+    'h=50', 'h=60', 'h=75', 'h=100',
+    'sq75', 'sq100',                   // Imgur square thumbnails
+    'mqdefault',                       // YouTube medium quality (320x180)
+    'sddefault',                       // YouTube SD (640x480) - OK だが念のため残す
+  ];
+  return !badPatterns.any(lower.contains);
+}
+
 const _typeMap = {
   AnimalType.cat:          'cat',
   AnimalType.dog:          'dog',
@@ -72,9 +90,13 @@ Future<List<VideoPost>> _fetchAll({bool forceRefresh = false}) async {
 
   if (posts.isEmpty) return [];
 
-  // 重複除去
+  // 重複除去 + 低解像度URLフィルター
   final seen = <String>{};
-  final unique = posts.where((p) => seen.add(p.id)).toList()..shuffle();
+  final unique = posts
+      .where((p) => seen.add(p.id))
+      .where((p) => _isHighQualityUrl(p.thumbnailUrl))
+      .toList()
+    ..shuffle();
 
   _cache = unique;
   _lastFetch = now;
@@ -113,25 +135,31 @@ Future<List<VideoPost>> _fetchEdgeType(AnimalType type, String typeStr) async {
   } catch (_) { return []; }
 }
 
-// Cat API（最大20枚）
+// Cat API（最大20枚・最低400×300px以上のみ）
 Future<void> _fetchCatApi(List<VideoPost> out) async {
   try {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final res = await http.get(Uri.parse(
-        'https://api.thecatapi.com/v1/images/search?limit=20&ts=$ts'));
+        'https://api.thecatapi.com/v1/images/search?limit=30&size=full&ts=$ts'));
     if (res.statusCode != 200) return;
     final List data = jsonDecode(res.body);
     final catTags = ['寝顔', 'ゴロゴロ', 'おっとり', '甘え', 'まん丸', 'ふみふみ', 'おだやか'];
-    for (int i = 0; i < data.length; i++) {
+    int count = 0;
+    for (int i = 0; i < data.length && count < 20; i++) {
+      final w = (data[i]['width'] as num?)?.toInt() ?? 0;
+      final h = (data[i]['height'] as num?)?.toInt() ?? 0;
+      // 400×300px 未満はスキップ
+      if (w < 400 || h < 300) continue;
       out.add(VideoPost(
         id: 'cat_${data[i]['id']}',
         sourceUrl: data[i]['url'], thumbnailUrl: data[i]['url'],
         animalType: AnimalType.cat,
-        tags: ['猫', catTags[i % catTags.length], 'もふもふ'],
-        calmScore: 0.82 + (i % 5) * 0.03,
+        tags: ['猫', catTags[count % catTags.length], 'もふもふ'],
+        calmScore: 0.82 + (count % 5) * 0.03,
         soundLevel: 0.1, mood: 'healing',
-        isAsmr: i % 6 == 0,
+        isAsmr: count % 6 == 0,
       ));
+      count++;
     }
   } catch (_) {}
 }
@@ -220,7 +248,7 @@ Future<void> _fetchFox(List<VideoPost> out) async {
   await Future.wait(futures);
 }
 
-// Giphy（直接取得・CORS対応）
+// Giphy（直接取得・高画質版）
 Future<void> _fetchGiphy(List<VideoPost> out) async {
   const giphyKey = 'dc6zaTOxFJmzC';
   const searches = [
@@ -244,7 +272,16 @@ Future<void> _fetchGiphy(List<VideoPost> out) async {
       final data = jsonDecode(res.body);
       final List gifs = data['data'] ?? [];
       for (int i = 0; i < gifs.length; i++) {
-        final gifUrl = gifs[i]['images']?['fixed_height']?['url'] ?? '';
+        final images = gifs[i]['images'];
+        // 高画質優先: fixed_width(480px幅) > original_still > fixed_height
+        // original は容量が大きすぎるため fixed_width を使用
+        final w = int.tryParse(
+            images?['fixed_width']?['width']?.toString() ?? '0') ?? 0;
+        // 幅 400px 未満はスキップ（低解像度）
+        if (w < 400) continue;
+        final gifUrl = images?['fixed_width']?['url']
+            ?? images?['original_still']?['url']
+            ?? '';
         if (gifUrl.isEmpty) continue;
         out.add(VideoPost(
           id: 'giphy_${s.$1.replaceAll(' ', '_')}_$i',

@@ -70,8 +70,13 @@ Future<List<VideoPost>> _searchVideos({
       final id = item['id']['videoId'] as String;
       final snippet = item['snippet'];
       final title = snippet['title'] as String? ?? '';
-      final thumb = snippet['thumbnails']['high']?['url'] ??
-          snippet['thumbnails']['medium']?['url'] ?? '';
+      // maxres(1280×720) > standard(640×480) > high(480×360) の順で高画質優先
+      final thumbs = snippet['thumbnails'];
+      final thumb = thumbs['maxres']?['url']
+          ?? thumbs['standard']?['url']
+          ?? thumbs['high']?['url']
+          ?? thumbs['medium']?['url']
+          ?? '';
 
       return VideoPost(
         id: 'yt_$id',

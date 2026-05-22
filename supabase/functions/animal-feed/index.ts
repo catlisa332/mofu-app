@@ -22,14 +22,14 @@ const subredditMap: Record<string, { subs: string[]; tags: string[] }> = {
 
 // ─── Tumblr タグ設定 ────────────────────────────────────────
 const tumblrTagMap: Record<string, { tags: string[]; mofuTags: string[] }> = {
-  cat:         { tags: ['cats', 'cute cat', 'kitty cat'], mofuTags: ['猫', 'もふもふ', 'かわいい'] },
-  dog:         { tags: ['dogs', 'cute dog', 'puppy'], mofuTags: ['犬', 'ふわふわ', 'かわいい'] },
-  otter:       { tags: ['otter', 'cute otter'], mofuTags: ['カワウソ', 'かわいい'] },
-  capybara:    { tags: ['capybara'], mofuTags: ['カピバラ', 'のんびり'] },
-  rabbit:      { tags: ['bunny', 'cute rabbit', 'rabbits'], mofuTags: ['うさぎ', 'もふもふ'] },
-  bird:        { tags: ['cute bird', 'parrot', 'budgie'], mofuTags: ['鳥', 'かわいい'] },
+  cat:         { tags: ['cats of tumblr', 'cute cat', 'kitty cat'], mofuTags: ['猫', 'もふもふ', 'かわいい'] },
+  dog:         { tags: ['dogs of tumblr', 'cute dog', 'puppy'], mofuTags: ['犬', 'ふわふわ', 'かわいい'] },
+  otter:       { tags: ['otter', 'cute otter', 'otterly adorable'], mofuTags: ['カワウソ', 'かわいい'] },
+  capybara:    { tags: ['capybara', 'capybaras'], mofuTags: ['カピバラ', 'のんびり'] },
+  rabbit:      { tags: ['bunnies of tumblr', 'cute rabbit', 'bunny'], mofuTags: ['うさぎ', 'もふもふ'] },
+  bird:        { tags: ['birds of tumblr', 'cute bird', 'birb'], mofuTags: ['鳥', 'かわいい'] },
   smallAnimal: { tags: ['hamster', 'guinea pig', 'hedgehog'], mofuTags: ['小動物', 'まん丸'] },
-  mixed:       { tags: ['cute animals', 'fluffy animals'], mofuTags: ['癒し', 'どうぶつ'] },
+  mixed:       { tags: ['animals of tumblr', 'cute animals', 'fluffy'], mofuTags: ['癒し', 'どうぶつ'] },
   baby:        { tags: ['baby animals', 'baby animal'], mofuTags: ['赤ちゃん', 'ちいさい'] },
 }
 

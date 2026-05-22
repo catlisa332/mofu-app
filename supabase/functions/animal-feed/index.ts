@@ -5,9 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Giphy デモAPIキー（無料・レート制限あり）
 const GIPHY_KEY = 'dc6zaTOxFJmzC'
 
+// ─── Reddit 設定 ───────────────────────────────────────────
 const subredditMap: Record<string, { subs: string[]; tags: string[] }> = {
   cat:         { subs: ['cats', 'IllegallySmolCats', 'catpictures'], tags: ['猫', 'もふもふ'] },
   dog:         { subs: ['dogs', 'dogpictures', 'aww'], tags: ['犬', 'ふわふわ'] },
@@ -20,7 +20,20 @@ const subredditMap: Record<string, { subs: string[]; tags: string[] }> = {
   baby:        { subs: ['aww'], tags: ['赤ちゃん', 'ちいさい'] },
 }
 
-// Giphy検索クエリ
+// ─── Tumblr タグ設定 ────────────────────────────────────────
+const tumblrTagMap: Record<string, { tags: string[]; mofuTags: string[] }> = {
+  cat:         { tags: ['cats', 'cute cat', 'kitty cat'], mofuTags: ['猫', 'もふもふ', 'かわいい'] },
+  dog:         { tags: ['dogs', 'cute dog', 'puppy'], mofuTags: ['犬', 'ふわふわ', 'かわいい'] },
+  otter:       { tags: ['otter', 'cute otter'], mofuTags: ['カワウソ', 'かわいい'] },
+  capybara:    { tags: ['capybara'], mofuTags: ['カピバラ', 'のんびり'] },
+  rabbit:      { tags: ['bunny', 'cute rabbit', 'rabbits'], mofuTags: ['うさぎ', 'もふもふ'] },
+  bird:        { tags: ['cute bird', 'parrot', 'budgie'], mofuTags: ['鳥', 'かわいい'] },
+  smallAnimal: { tags: ['hamster', 'guinea pig', 'hedgehog'], mofuTags: ['小動物', 'まん丸'] },
+  mixed:       { tags: ['cute animals', 'fluffy animals'], mofuTags: ['癒し', 'どうぶつ'] },
+  baby:        { tags: ['baby animals', 'baby animal'], mofuTags: ['赤ちゃん', 'ちいさい'] },
+}
+
+// ─── Giphy 検索設定 ─────────────────────────────────────────
 const giphyQueryMap: Record<string, { query: string; tags: string[] }> = {
   cat:         { query: 'cute cat sleeping', tags: ['猫', 'GIF', 'ねむい'] },
   dog:         { query: 'cute dog fluffy', tags: ['犬', 'GIF', 'ふわふわ'] },
@@ -33,12 +46,21 @@ const giphyQueryMap: Record<string, { query: string; tags: string[] }> = {
   baby:        { query: 'baby animal cute', tags: ['赤ちゃん動物', 'GIF', 'ちいさい'] },
 }
 
+// ─── ユーティリティ ──────────────────────────────────────────
 function isImage(url: string): boolean {
   const lower = url.toLowerCase()
   return lower.endsWith('.jpg') || lower.endsWith('.jpeg') ||
     lower.endsWith('.png') || lower.endsWith('.gif') ||
     lower.endsWith('.webp') || lower.includes('i.redd.it') ||
     lower.includes('i.imgur.com')
+}
+
+// 低解像度URLを弾く
+function isHighQuality(url: string): boolean {
+  const lower = url.toLowerCase()
+  const bad = ['_t.jpg', '_t.jpeg', '/thumb/', '/thumbnail/', '/small/',
+    '50x50', '75x75', '100x', '120x', 'mqdefault', 'sq75', 'sq100']
+  return !bad.some(p => lower.includes(p))
 }
 
 function calcCalmScore(title: string, upvoteRatio: number): number {
@@ -48,31 +70,6 @@ function calcCalmScore(title: string, upvoteRatio: number): number {
   if (sadWords.some(w => lower.includes(w))) score -= 0.25
   if (lower.includes('sleep') || lower.includes('cute') || lower.includes('fluffy')) score += 0.05
   return Math.max(0.3, Math.min(1.0, score))
-}
-
-async function fetchReddit(sub: string, limit = 6): Promise<any[]> {
-  const res = await fetch(
-    `https://www.reddit.com/r/${sub}/hot.json?limit=${limit}&raw_json=1`,
-    { headers: { 'User-Agent': 'mofu-app/1.0' } }
-  )
-  if (!res.ok) return []
-  const data = await res.json()
-  return data?.data?.children ?? []
-}
-
-// Giphy GIFを取得
-async function fetchGiphy(query: string, limit = 5): Promise<string[]> {
-  try {
-    const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=${limit}&rating=g`
-    const res = await fetch(url)
-    if (!res.ok) return []
-    const data = await res.json()
-    return (data.data ?? [])
-      .map((g: any) => g?.images?.fixed_height?.url ?? '')
-      .filter((u: string) => u.length > 0)
-  } catch (_) {
-    return []
-  }
 }
 
 function extractTags(title: string): string[] {
@@ -85,6 +82,72 @@ function extractTags(title: string): string[] {
   return tags
 }
 
+// ─── Reddit 取得 ─────────────────────────────────────────────
+async function fetchReddit(sub: string, limit = 6): Promise<any[]> {
+  const res = await fetch(
+    `https://www.reddit.com/r/${sub}/hot.json?limit=${limit}&raw_json=1`,
+    { headers: { 'User-Agent': 'mofu-app/1.0' } }
+  )
+  if (!res.ok) return []
+  const data = await res.json()
+  return data?.data?.children ?? []
+}
+
+// ─── Tumblr 取得（高画質写真のみ）────────────────────────────
+async function fetchTumblr(
+  tag: string,
+  limit = 6
+): Promise<{ url: string; postUrl: string }[]> {
+  const apiKey = Deno.env.get('TUMBLR_API_KEY') ?? ''
+  if (!apiKey) return []
+  try {
+    const res = await fetch(
+      `https://api.tumblr.com/v2/tagged?tag=${encodeURIComponent(tag)}&api_key=${apiKey}&limit=20&filter=text`,
+      { headers: { 'User-Agent': 'mofu-app/1.0' } }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    const posts: any[] = data.response ?? []
+    const results: { url: string; postUrl: string }[] = []
+
+    for (const post of posts) {
+      if (post.type !== 'photo') continue
+      const photos: any[] = post.photos ?? []
+      for (const photo of photos) {
+        const orig = photo.original_size
+        if (!orig) continue
+        // 最低 500px 幅以上の高画質のみ
+        if ((orig.width ?? 0) < 500) continue
+        if (!isHighQuality(orig.url ?? '')) continue
+        results.push({
+          url: orig.url,
+          postUrl: post.post_url ?? 'https://tumblr.com',
+        })
+        if (results.length >= limit) return results
+      }
+    }
+    return results
+  } catch (_) {
+    return []
+  }
+}
+
+// ─── Giphy 取得（高画質：fixed_width = 480px）────────────────
+async function fetchGiphy(query: string, limit = 4): Promise<string[]> {
+  try {
+    const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=${limit}&rating=g`
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const data = await res.json()
+    return (data.data ?? [])
+      .map((g: any) => g?.images?.fixed_width?.url ?? g?.images?.original_still?.url ?? '')
+      .filter((u: string) => u.length > 0)
+  } catch (_) {
+    return []
+  }
+}
+
+// ─── メインハンドラー ─────────────────────────────────────────
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -96,15 +159,16 @@ serve(async (req) => {
 
   const posts: any[] = []
 
-  // Reddit投稿を取得
-  const config = subredditMap[animalType] ?? subredditMap['mixed']
-  for (const sub of config.subs) {
+  // ① Reddit 投稿
+  const redditConfig = subredditMap[animalType] ?? subredditMap['mixed']
+  for (const sub of redditConfig.subs) {
     try {
       const children = await fetchReddit(sub, limit)
       for (const child of children) {
         const post = child.data
         const imgUrl = post.url as string ?? ''
         if (!isImage(imgUrl)) continue
+        if (!isHighQuality(imgUrl)) continue
         if (post.over_18) continue
         if ((post.score ?? 0) < 50) continue
         const title = post.title ?? ''
@@ -113,7 +177,7 @@ serve(async (req) => {
           sourceUrl: `https://reddit.com${post.permalink}`,
           thumbnailUrl: imgUrl,
           animalType,
-          tags: [...config.tags, ...extractTags(title)].slice(0, 3),
+          tags: [...redditConfig.tags, ...extractTags(title)].slice(0, 3),
           calmScore: calcCalmScore(title, post.upvote_ratio ?? 0.8),
           soundLevel: 0.1,
           mood: 'healing',
@@ -125,14 +189,37 @@ serve(async (req) => {
     } catch (_) { continue }
   }
 
-  // Giphy GIFを追加
+  // ② Tumblr 写真（高画質）
+  const tumblrConfig = tumblrTagMap[animalType] ?? tumblrTagMap['mixed']
+  for (const tag of tumblrConfig.tags) {
+    try {
+      const photos = await fetchTumblr(tag, 4)
+      for (let i = 0; i < photos.length; i++) {
+        posts.push({
+          id: `tumblr_${animalType}_${tag.replace(/\s/g, '_')}_${i}_${Date.now()}`,
+          sourceUrl: photos[i].postUrl,
+          thumbnailUrl: photos[i].url,
+          animalType,
+          tags: tumblrConfig.mofuTags,
+          calmScore: 0.88,
+          soundLevel: 0.05,
+          mood: 'healing',
+          hasSadContext: false,
+          isAsmr: false,
+          isGif: photos[i].url.toLowerCase().endsWith('.gif'),
+        })
+      }
+    } catch (_) { continue }
+  }
+
+  // ③ Giphy GIF
   const giphyConfig = giphyQueryMap[animalType] ?? giphyQueryMap['mixed']
   try {
     const gifUrls = await fetchGiphy(giphyConfig.query, 4)
     for (let i = 0; i < gifUrls.length; i++) {
       posts.push({
         id: `giphy_${animalType}_${i}_${Date.now()}`,
-        sourceUrl: `https://giphy.com`,
+        sourceUrl: 'https://giphy.com',
         thumbnailUrl: gifUrls[i],
         animalType,
         tags: giphyConfig.tags,

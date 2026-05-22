@@ -135,31 +135,29 @@ Future<List<VideoPost>> _fetchEdgeType(AnimalType type, String typeStr) async {
   } catch (_) { return []; }
 }
 
-// Cat API（最大20枚・最低400×300px以上のみ）
+// Cat API（最大20枚）
 Future<void> _fetchCatApi(List<VideoPost> out) async {
   try {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final res = await http.get(Uri.parse(
-        'https://api.thecatapi.com/v1/images/search?limit=30&size=full&ts=$ts'));
+        'https://api.thecatapi.com/v1/images/search?limit=20&ts=$ts'));
     if (res.statusCode != 200) return;
     final List data = jsonDecode(res.body);
     final catTags = ['寝顔', 'ゴロゴロ', 'おっとり', '甘え', 'まん丸', 'ふみふみ', 'おだやか'];
-    int count = 0;
-    for (int i = 0; i < data.length && count < 20; i++) {
+    for (int i = 0; i < data.length; i++) {
       final w = (data[i]['width'] as num?)?.toInt() ?? 0;
       final h = (data[i]['height'] as num?)?.toInt() ?? 0;
-      // 400×300px 未満はスキップ
-      if (w < 400 || h < 300) continue;
+      // サイズが判明している場合のみフィルター（どちらか長辺が300px以上）
+      if (w > 0 && h > 0 && w < 300 && h < 300) continue;
       out.add(VideoPost(
         id: 'cat_${data[i]['id']}',
         sourceUrl: data[i]['url'], thumbnailUrl: data[i]['url'],
         animalType: AnimalType.cat,
-        tags: ['猫', catTags[count % catTags.length], 'もふもふ'],
-        calmScore: 0.82 + (count % 5) * 0.03,
+        tags: ['猫', catTags[i % catTags.length], 'もふもふ'],
+        calmScore: 0.82 + (i % 5) * 0.03,
         soundLevel: 0.1, mood: 'healing',
-        isAsmr: count % 6 == 0,
+        isAsmr: i % 6 == 0,
       ));
-      count++;
     }
   } catch (_) {}
 }
@@ -273,14 +271,14 @@ Future<void> _fetchGiphy(List<VideoPost> out) async {
       final List gifs = data['data'] ?? [];
       for (int i = 0; i < gifs.length; i++) {
         final images = gifs[i]['images'];
-        // 高画質優先: fixed_width(480px幅) > original_still > fixed_height
-        // original は容量が大きすぎるため fixed_width を使用
+        // 高画質優先: fixed_width(480px) > original_still > fixed_height
+        // 幅チェック：サイズが判明して明らかに小さい場合のみスキップ
         final w = int.tryParse(
             images?['fixed_width']?['width']?.toString() ?? '0') ?? 0;
-        // 幅 400px 未満はスキップ（低解像度）
-        if (w < 400) continue;
+        if (w > 0 && w < 200) continue; // 明らかに極小のみ除外
         final gifUrl = images?['fixed_width']?['url']
             ?? images?['original_still']?['url']
+            ?? images?['fixed_height']?['url']  // フォールバック
             ?? '';
         if (gifUrl.isEmpty) continue;
         out.add(VideoPost(

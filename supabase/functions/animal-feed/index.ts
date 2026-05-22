@@ -63,6 +63,48 @@ function isHighQuality(url: string): boolean {
   return !bad.some(p => lower.includes(p))
 }
 
+// ─── イラスト・アート除外 ─────────────────────────────────────
+// イラスト系タグ（Tumblr タグと照合）
+const ART_TAGS = new Set([
+  'art', 'illustration', 'illustrations', 'drawing', 'drawings',
+  'artwork', 'artworks', 'digital art', 'digitalart', 'fanart', 'fan art',
+  'sketch', 'sketches', 'watercolor', 'watercolour', 'my art', 'myart',
+  'original art', 'artist', 'illustrator', 'painted', 'painting', 'paintings',
+  'pixel art', 'pixelart', 'comic', 'comics', 'cartoon', 'cartoons',
+  'vector', 'concept art', 'character design', 'anime art', 'manga',
+  'furry art', 'furry', 'anthro', 'oc', 'original character',
+  'animation', 'gif art', 'art blog',
+])
+
+// イラスト系ドメイン
+const ART_DOMAINS = [
+  'deviantart.com', 'artstation.com', 'pixiv.net', 'furaffinity.net',
+  'weasyl.com', 'newgrounds.com', 'e621.net',
+]
+
+// タグ・キャプション・URLでイラストかどうか判定
+function isIllustration(
+  tags: string[],
+  caption: string,
+  url: string
+): boolean {
+  // ① タグチェック
+  if (tags.some(t => ART_TAGS.has(t.toLowerCase().trim()))) return true
+
+  // ② キャプション内のアートキーワード
+  const lower = caption.toLowerCase()
+  const artPhrases = [
+    'illustration', 'digital art', 'my art', 'painted by', 'drawn by',
+    'art by', 'commission', 'deviantart', 'artstation',
+  ]
+  if (artPhrases.some(k => lower.includes(k))) return true
+
+  // ③ イラスト系ドメイン
+  if (ART_DOMAINS.some(d => url.includes(d))) return true
+
+  return false
+}
+
 function calcCalmScore(title: string, upvoteRatio: number): number {
   let score = upvoteRatio * 0.7 + 0.2
   const lower = title.toLowerCase()
@@ -112,6 +154,13 @@ async function fetchTumblr(
 
     for (const post of posts) {
       if (post.type !== 'photo') continue
+
+      // イラスト・アートを除外
+      const postTags: string[] = post.tags ?? []
+      const caption: string = post.caption ?? post.summary ?? ''
+      const postUrl: string = post.post_url ?? 'https://tumblr.com'
+      if (isIllustration(postTags, caption, postUrl)) continue
+
       const photos: any[] = post.photos ?? []
       for (const photo of photos) {
         const orig = photo.original_size
@@ -119,9 +168,11 @@ async function fetchTumblr(
         // 最低 500px 幅以上の高画質のみ
         if ((orig.width ?? 0) < 500) continue
         if (!isHighQuality(orig.url ?? '')) continue
+        // 画像URLでもアートドメインチェック
+        if (isIllustration([], '', orig.url ?? '')) continue
         results.push({
           url: orig.url,
-          postUrl: post.post_url ?? 'https://tumblr.com',
+          postUrl,
         })
         if (results.length >= limit) return results
       }
@@ -172,6 +223,8 @@ serve(async (req) => {
         if (post.over_18) continue
         if ((post.score ?? 0) < 50) continue
         const title = post.title ?? ''
+        // イラスト・アート投稿を除外（タイトル・URLで判定）
+        if (isIllustration([], title, imgUrl)) continue
         posts.push({
           id: `reddit_${post.id}`,
           sourceUrl: `https://reddit.com${post.permalink}`,

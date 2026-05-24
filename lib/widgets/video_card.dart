@@ -152,7 +152,7 @@ class VideoCard extends StatelessWidget {
 
   Widget _buildFooter(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 10, 12, 12),
+      padding: const EdgeInsets.fromLTRB(10, 8, 12, 10),
       child: Row(
         children: [
           // 🌿 苦手（左端）
@@ -164,14 +164,7 @@ class VideoCard extends StatelessWidget {
                 child: Text('🌿', style: TextStyle(fontSize: 18)),
               ),
             ),
-          // タグ
-          Expanded(
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: post.tags.take(3).map((t) => _tag('#$t')).toList(),
-            ),
-          ),
+          const Spacer(),
           // 📤 シェア（右端）
           GestureDetector(
             onTap: () => sharePost(
@@ -186,21 +179,6 @@ class VideoCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _tag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: MofuColors.softPeach,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(text,
-          style: const TextStyle(
-              fontSize: 11,
-              color: MofuColors.softBrown,
-              fontWeight: FontWeight.w500)),
     );
   }
 

@@ -10,23 +10,49 @@ import '../../utils/share_utils.dart';
 import '../../widgets/calm_score_badge.dart';
 import '../../widgets/youtube_player.dart';
 
-class DetailScreen extends ConsumerWidget {
+class DetailScreen extends ConsumerStatefulWidget {
   final VideoPost post;
-
   const DetailScreen({super.key, required this.post});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends ConsumerState<DetailScreen> {
+  double _dragOffset = 0;
+
+  VideoPost get post => widget.post;
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (d.delta.dy > 0) setState(() => _dragOffset += d.delta.dy);
+  }
+
+  void _onDragEnd(DragEndDetails d) {
+    final vel = d.primaryVelocity ?? 0;
+    if (vel > 400 || _dragOffset > 160) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _dragOffset = 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isFav = ref.watch(favoritesProvider).valueOrNull?.contains(post.id) ?? false;
     final isYoutube = post.youtubeVideoId != null;
 
-    // YouTube の場合は AppBar なし（iframe が Flutter canvas を覆うため）
-    // ✕ ボタンは iframe の下のパネルに配置
     if (isYoutube) {
       return _buildYoutubeLayout(context, ref, isFav);
     }
 
-    return Scaffold(
+    // 通常画像: 下スワイプで閉じる
+    return GestureDetector(
+      onVerticalDragUpdate: _onDragUpdate,
+      onVerticalDragEnd: _onDragEnd,
+      onVerticalDragCancel: () => setState(() => _dragOffset = 0),
+      child: Transform.translate(
+        offset: Offset(0, _dragOffset.clamp(0, 200)),
+        child: Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -76,10 +102,10 @@ class DetailScreen extends ConsumerWidget {
                   imageUrl: post.thumbnailUrl,
                   fit: BoxFit.contain,
                   placeholder: (_, __) => const Center(
-                    child: Text('🐾', style: TextStyle(fontSize: 56)),
+                    child: Icon(Icons.pets, size: 48, color: Color(0x33FFFFFF)),
                   ),
                   errorWidget: (_, __, ___) => const Center(
-                    child: Text('🐾', style: TextStyle(fontSize: 56)),
+                    child: Icon(Icons.pets, size: 48, color: Color(0x33FFFFFF)),
                   ),
                 ),
               ),
@@ -87,6 +113,8 @@ class DetailScreen extends ConsumerWidget {
           ),
           _buildBottomPanel(context, ref, isFav, isYoutube: false),
         ],
+      ),
+        ),
       ),
     );
   }

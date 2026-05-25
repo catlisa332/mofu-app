@@ -56,8 +56,17 @@ class _MediaViewerState extends State<MediaViewer> {
     if (MediaViewer.isVideo(widget.url)) {
       if (!_initialized) {
         return Container(
-          color: const Color(0xFFEEE8E0),
-          child: const Center(child: Text('🐾', style: TextStyle(fontSize: 36))),
+          color: const Color(0xFFF2EDE8),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFFECE6DF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.pets, size: 32, color: Color(0xFFBF8B67)),
+            ),
+          ),
         );
       }
       return GestureDetector(
@@ -79,7 +88,7 @@ class _MediaViewerState extends State<MediaViewer> {
             if (!_controller!.value.isPlaying)
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.black38,
                   shape: BoxShape.circle,
                 ),
@@ -96,12 +105,30 @@ class _MediaViewerState extends State<MediaViewer> {
       imageUrl: widget.url,
       fit: widget.fit,
       placeholder: (_, __) => Container(
-        color: const Color(0xFFEEE8E0),
-        child: const Center(child: Text('🐾', style: TextStyle(fontSize: 36))),
+        color: const Color(0xFFF2EDE8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Color(0xFFECE6DF),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.pets, size: 32, color: Color(0xFFBF8B67)),
+          ),
+        ),
       ),
       errorWidget: (_, __, ___) => Container(
-        color: const Color(0xFFEEE8E0),
-        child: const Center(child: Text('🐾', style: TextStyle(fontSize: 36))),
+        color: const Color(0xFFF2EDE8),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Color(0xFFECE6DF),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.pets, size: 32, color: Color(0xFFBF8B67)),
+          ),
+        ),
       ),
     );
   }

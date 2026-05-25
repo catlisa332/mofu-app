@@ -192,16 +192,23 @@ class FeedScreen extends ConsumerWidget {
         ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => ref.read(feedProvider.notifier).refresh(),
-        backgroundColor: MofuColors.accent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
-        shape: const StadiumBorder(),
-        icon: const Icon(Icons.refresh_rounded, size: 18),
-        label: const Text('もっと見る',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      // タブバー高さ(49) + デバイスセーフエリア分だけ上にずらす
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: 49 + MediaQuery.of(context).padding.bottom,
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => ref.read(feedProvider.notifier).refresh(),
+          backgroundColor: MofuColors.accent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: const StadiumBorder(),
+          icon: const Icon(Icons.refresh_rounded, size: 18),
+          label: const Text('もっと見る',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        ),
       ),
     );
   }

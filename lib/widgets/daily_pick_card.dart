@@ -70,14 +70,28 @@ class DailyPickCard extends ConsumerWidget {
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(
                             color: MofuColors.softPeach,
-                            child: const Center(
-                                child: Text('🐾',
-                                    style: TextStyle(fontSize: 40)))),
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFECE6DF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.pets, size: 32, color: MofuColors.accent),
+                              ),
+                            )),
                         errorWidget: (_, __, ___) => Container(
                             color: MofuColors.softPeach,
-                            child: const Center(
-                                child: Text('🐾',
-                                    style: TextStyle(fontSize: 40)))),
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFECE6DF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.pets, size: 32, color: MofuColors.accent),
+                              ),
+                            )),
                       ),
                     ),
                     // グラデーション
@@ -109,7 +123,7 @@ class DailyPickCard extends ConsumerWidget {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('🐾', style: TextStyle(fontSize: 12)),
+                            Icon(Icons.pets, size: 12, color: Colors.white),
                             SizedBox(width: 4),
                             Text('今日のモフ',
                                 style: TextStyle(

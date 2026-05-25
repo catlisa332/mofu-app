@@ -86,7 +86,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                 color: Colors.black54,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.ios_share, color: Colors.white, size: 18),
+              child: const Icon(Icons.share_rounded, color: Colors.white, size: 18),
             ),
           ),
           const SizedBox(width: 4),

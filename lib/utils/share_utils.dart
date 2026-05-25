@@ -14,13 +14,7 @@ Future<void> sharePost({
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
-            children: [
-              Text('📋', style: TextStyle(fontSize: 16)),
-              SizedBox(width: 8),
-              Text('URLをコピーしたよ'),
-            ],
-          ),
+          content: const Text('リンクをコピーしたよ'),
           backgroundColor: const Color(0xFF7A9E7E),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

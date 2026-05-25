@@ -39,7 +39,7 @@ class FeedScreen extends ConsumerWidget {
     final categoryFilter = ref.watch(categoryFilterProvider);
 
     return Scaffold(
-      backgroundColor: isTired ? const Color(0xFFF5F0FA) : MofuColors.cream,
+      backgroundColor: MofuColors.systemBackground,
       body: RefreshIndicator(
         color: MofuColors.warmTan,
         backgroundColor: Colors.white,
@@ -194,11 +194,14 @@ class FeedScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => ref.read(feedProvider.notifier).refresh(),
-        backgroundColor: MofuColors.warmTan,
+        backgroundColor: MofuColors.accent,
+        foregroundColor: Colors.white,
         elevation: 0,
-        icon: const Text('🐾', style: TextStyle(fontSize: 18)),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
+        shape: const StadiumBorder(),
+        icon: const Icon(Icons.refresh_rounded, size: 18),
         label: const Text('もっと見る',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
       ),
     );
   }
@@ -213,62 +216,73 @@ class _AppBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SliverAppBar(
+      pinned: true,
       floating: true,
       snap: true,
-      backgroundColor: isTired ? const Color(0xFFF5F0FA) : MofuColors.cream,
+      backgroundColor: MofuColors.systemBackground,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: MofuColors.separator,
       elevation: 0,
+      scrolledUnderElevation: 0.5,
+      titleSpacing: 20,
+      toolbarHeight: 52,
       title: Row(
         children: [
-          const Text('🐾', style: TextStyle(fontSize: 20)),
-          const SizedBox(width: 8),
-          const Text(
+          Text(
             'MOFU',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w300,
-              letterSpacing: 6,
-              color: MofuColors.softBrown,
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: MofuColors.label,
+              letterSpacing: -0.5,
             ),
           ),
           if (isTired) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: MofuColors.softLavender,
-                borderRadius: BorderRadius.circular(10),
+                color: MofuColors.accentSoft,
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('おやすみモード',
-                  style: TextStyle(fontSize: 10, color: MofuColors.softBrown)),
+              child: Text(
+                'おやすみ',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: MofuColors.accent,
+                ),
+              ),
             ),
           ],
         ],
       ),
       actions: [
+        // 気分ボタン
+        GestureDetector(
+          onTap: () => MoodSelectorSheet.show(context),
+          child: Container(
+            margin: const EdgeInsets.only(right: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: MofuColors.secondarySystemBackground,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _moodEmoji(todayMood),
+              style: const TextStyle(fontSize: 17),
+            ),
+          ),
+        ),
         // 更新ボタン
         IconButton(
           onPressed: () => ref.read(feedProvider.notifier).refresh(),
-          tooltip: '新しい画像を読み込む',
-          icon: const Text('🔄', style: TextStyle(fontSize: 18)),
-        ),
-        // 気分セレクター
-        TextButton(
-          onPressed: () => MoodSelectorSheet.show(context),
-          child: Row(
-            children: [
-              Text(
-                _moodEmoji(todayMood),
-                style: const TextStyle(fontSize: 20),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                todayMood == null ? '気分は？' : '気分を変える',
-                style: const TextStyle(
-                    color: MofuColors.textLight, fontSize: 12),
-              ),
-              const SizedBox(width: 8),
-            ],
+          icon: const Icon(
+            Icons.refresh_rounded,
+            size: 22,
+            color: MofuColors.accent,
           ),
+          padding: const EdgeInsets.only(right: 16),
         ),
       ],
     );

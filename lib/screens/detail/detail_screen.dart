@@ -117,89 +117,85 @@ class DetailScreen extends ConsumerWidget {
     required bool isYoutube,
   }) {
     return Container(
-      color: const Color(0xFF1A1410),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+      decoration: BoxDecoration(
+        color: isYoutube
+            ? const Color(0xFF1C1C1E)          // iOS dark
+            : MofuColors.cardBackground,
+        borderRadius: isYoutube
+            ? BorderRadius.zero
+            : const BorderRadius.vertical(bottom: Radius.circular(0)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Calm Score + タグ行
+          // 動物ラベル + タグ
           Row(
             children: [
-              CalmScoreBadge(score: post.calmScore),
-              if (post.isAsmr) ...[
-                const SizedBox(width: 8),
-                _darkBadge('🎵 ASMR'),
-              ],
-              const Spacer(),
               Text(
                 _animalLabel(post.animalType),
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isYoutube
+                      ? Colors.white54
+                      : MofuColors.secondaryLabel,
+                ),
               ),
+              if (post.isAsmr) ...[
+                const SizedBox(width: 8),
+                _pill('ASMR', isYoutube),
+              ],
+              const Spacer(),
+              CalmScoreBadge(score: post.calmScore),
             ],
           ),
           const SizedBox(height: 10),
 
           // タグ
           Wrap(
-            spacing: 8,
+            spacing: 6,
             runSpacing: 4,
-            children: post.tags.map((t) => _tagChip('#$t')).toList(),
+            children: post.tags.map((t) => _tagChip('#$t', isYoutube)).toList(),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
 
           // アクションボタン行
           Row(
             children: [
-              // YouTube のときは ✕ 閉じるボタンを左端に大きく表示
+              // 閉じる（YouTube のみ）
               if (isYoutube) ...[
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                _IconAction(
+                  icon: Icons.close_rounded,
+                  label: '閉じる',
+                  dark: true,
                   onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.close, color: Colors.white70, size: 18),
-                        SizedBox(width: 4),
-                        Text('閉じる',
-                            style: TextStyle(
-                                color: Colors.white70, fontSize: 13)),
-                      ],
-                    ),
-                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
               ],
 
               // ❤️ お気に入り
-              _ActionButton(
-                emoji: isFav ? '❤️' : '♡',
-                label: isFav ? '保存済み' : 'お気に入り',
-                onTap: () =>
-                    ref.read(favoritesProvider.notifier).toggle(post.id),
+              _IconAction(
+                icon: isFav ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                label: isFav ? '保存済み' : '保存',
+                dark: isYoutube,
+                active: isFav,
+                onTap: () => ref.read(favoritesProvider.notifier).toggle(post.id),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
 
               // 🌿 苦手
-              _ActionButton(
-                emoji: '🌿',
+              _IconAction(
+                icon: Icons.not_interested_rounded,
                 label: '苦手',
+                dark: isYoutube,
                 onTap: () {
-                  ref
-                      .read(dislikeProvider.notifier)
-                      .dislike(post.id, post.tags);
+                  ref.read(dislikeProvider.notifier).dislike(post.id, post.tags);
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('覚えたよ。次から表示しないね 🌿'),
-                      backgroundColor: MofuColors.mossGreen,
+                      content: const Text('次から表示しないね'),
+                      backgroundColor: MofuColors.label,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -210,16 +206,32 @@ class DetailScreen extends ConsumerWidget {
               ),
               const Spacer(),
 
-              // 元投稿 / YouTubeで見る
-              TextButton(
-                onPressed: () => launchUrl(
+              // 元投稿へ
+              GestureDetector(
+                onTap: () => launchUrl(
                   Uri.parse(post.sourceUrl),
                   mode: LaunchMode.externalApplication,
                 ),
-                child: Text(
-                  isYoutube ? 'YouTube →' : '元投稿 →',
-                  style: const TextStyle(
-                      color: Colors.white38, fontSize: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      isYoutube ? 'YouTubeで見る' : '元の投稿',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isYoutube
+                            ? Colors.white38
+                            : MofuColors.secondaryLabel,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 11,
+                      color: isYoutube
+                          ? Colors.white38
+                          : MofuColors.tertiaryLabel,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -229,28 +241,38 @@ class DetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _darkBadge(String text) {
+  Widget _pill(String text, bool dark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: MofuColors.mossGreen.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: MofuColors.mossGreen.withOpacity(0.5)),
+        color: dark ? Colors.white12 : MofuColors.accentSoft,
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(text,
-          style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: dark ? Colors.white54 : MofuColors.accent,
+        ),
+      ),
     );
   }
 
-  Widget _tagChip(String text) {
+  Widget _tagChip(String text, bool dark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white10,
-        borderRadius: BorderRadius.circular(10),
+        color: dark ? Colors.white10 : MofuColors.secondarySystemBackground,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(text,
-          style: const TextStyle(color: Colors.white54, fontSize: 12)),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 12,
+          color: dark ? Colors.white54 : MofuColors.secondaryLabel,
+        ),
+      ),
     );
   }
 
@@ -270,36 +292,49 @@ class DetailScreen extends ConsumerWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final String emoji;
+class _IconAction extends StatelessWidget {
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool dark;
+  final bool active;
 
-  const _ActionButton({
-    required this.emoji,
+  const _IconAction({
+    required this.icon,
     required this.label,
     required this.onTap,
+    this.dark = false,
+    this.active = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final fg = dark
+        ? (active ? MofuColors.accent : Colors.white70)
+        : (active ? MofuColors.accent : MofuColors.secondaryLabel);
+    final bg = dark ? Colors.white10 : MofuColors.secondarySystemBackground;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: Colors.white10,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white12),
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    color: Colors.white70, fontSize: 13)),
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: fg,
+              ),
+            ),
           ],
         ),
       ),

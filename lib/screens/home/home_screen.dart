@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
@@ -16,6 +17,7 @@ class HomeScreen extends ConsumerWidget {
     final tabIndex = ref.watch(_tabIndexProvider);
 
     return Scaffold(
+      extendBody: true, // コンテンツをタブバーの下まで延ばす（iOS スタイル）
       body: IndexedStack(
         index: tabIndex,
         children: const [
@@ -25,7 +27,7 @@ class HomeScreen extends ConsumerWidget {
           SettingsScreen(),
         ],
       ),
-      bottomNavigationBar: _MofuBottomNav(
+      bottomNavigationBar: _AppleTabBar(
         currentIndex: tabIndex,
         onTap: (i) => ref.read(_tabIndexProvider.notifier).state = i,
       ),
@@ -33,34 +35,80 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _MofuBottomNav extends StatelessWidget {
+// ─── iOS スタイル タブバー（frosted glass）────────────────────────
+class _AppleTabBar extends StatelessWidget {
   final int currentIndex;
   final void Function(int) onTap;
 
-  const _MofuBottomNav({required this.currentIndex, required this.onTap});
+  const _AppleTabBar({required this.currentIndex, required this.onTap});
+
+  static const _items = [
+    _TabItem(icon: Icons.house_rounded,    outIcon: Icons.house_outlined,     label: 'ホーム'),
+    _TabItem(icon: Icons.bookmark_rounded, outIcon: Icons.bookmark_border_rounded, label: 'お気に入り'),
+    _TabItem(icon: Icons.bedtime_rounded,  outIcon: Icons.bedtime_outlined,   label: 'おやすみ'),
+    _TabItem(icon: Icons.person_rounded,   outIcon: Icons.person_outline_rounded, label: '設定'),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: MofuColors.divider)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 58,
-          child: Row(
-            children: [
-              _NavItem(emoji: '🐾', label: 'フィード',
-                  isSelected: currentIndex == 0, onTap: () => onTap(0)),
-              _NavItem(emoji: '❤️', label: 'お気に入り',
-                  isSelected: currentIndex == 1, onTap: () => onTap(1)),
-              _NavItem(emoji: '🌙', label: '睡眠',
-                  isSelected: currentIndex == 2, onTap: () => onTap(2)),
-              _NavItem(emoji: '⚙️', label: '設定',
-                  isSelected: currentIndex == 3, onTap: () => onTap(3)),
-            ],
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.85),
+            border: const Border(
+              top: BorderSide(color: MofuColors.separator, width: 0.5),
+            ),
+          ),
+          child: SizedBox(
+            height: 49 + bottomPad,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: bottomPad),
+              child: Row(
+                children: List.generate(_items.length, (i) {
+                  final item = _items[i];
+                  final selected = currentIndex == i;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => onTap(i),
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 150),
+                            child: Icon(
+                              selected ? item.icon : item.outIcon,
+                              key: ValueKey(selected),
+                              size: 24,
+                              color: selected
+                                  ? MofuColors.accent
+                                  : MofuColors.tertiaryLabel,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: selected
+                                  ? MofuColors.accent
+                                  : MofuColors.tertiaryLabel,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
           ),
         ),
       ),
@@ -68,55 +116,9 @@ class _MofuBottomNav extends StatelessWidget {
   }
 }
 
-class _NavItem extends StatelessWidget {
-  final String emoji;
+class _TabItem {
+  final IconData icon;
+  final IconData outIcon;
   final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.emoji,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: isSelected ? MofuColors.warmTan : Colors.transparent,
-                width: 2,
-              ),
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(emoji,
-                  style: TextStyle(fontSize: isSelected ? 24 : 20)),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isSelected
-                        ? MofuColors.warmTan
-                        : MofuColors.textLight,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                  )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  const _TabItem({required this.icon, required this.outIcon, required this.label});
 }

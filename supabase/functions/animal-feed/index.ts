@@ -183,16 +183,34 @@ async function fetchTumblr(
   }
 }
 
-// ─── Giphy 取得（高画質：fixed_width = 480px）────────────────
-async function fetchGiphy(query: string, limit = 4): Promise<string[]> {
+// ─── 人間のみ投稿を除外 ──────────────────────────────────────
+function isHumanOnly(title: string): boolean {
+  const lower = title.toLowerCase()
+  const humanSignals = [
+    'selfie', 'portrait of', 'photo of me', 'me and my', 'my son', 'my daughter',
+    'my wife', 'my husband', 'my girlfriend', 'my boyfriend', 'my kids',
+    'my child', 'my family', 'gave birth', 'ultrasound', 'pregnant',
+    'halloween costume', 'cosplay as', 'dress up as',
+  ]
+  if (!humanSignals.some(p => lower.includes(p))) return false
+  const animalWords = ['cat', 'dog', 'pet', 'animal', 'kitten', 'puppy',
+    'bird', 'rabbit', 'hamster', 'otter', 'guinea', 'ferret']
+  return !animalWords.some(w => lower.includes(w))
+}
+
+// ─── Giphy 取得（ID付き・高画質）────────────────────────────
+async function fetchGiphy(query: string, limit = 4): Promise<{url: string, id: string}[]> {
   try {
     const url = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=${limit}&rating=g`
     const res = await fetch(url)
     if (!res.ok) return []
     const data = await res.json()
     return (data.data ?? [])
-      .map((g: any) => g?.images?.fixed_width?.url ?? g?.images?.original_still?.url ?? '')
-      .filter((u: string) => u.length > 0)
+      .map((g: any) => ({
+        url: g?.images?.fixed_width?.url ?? g?.images?.original_still?.url ?? '',
+        id: g?.id ?? '',
+      }))
+      .filter((item: {url: string, id: string}) => item.url.length > 0)
   } catch (_) {
     return []
   }
@@ -225,6 +243,7 @@ serve(async (req) => {
         const title = post.title ?? ''
         // イラスト・アート投稿を除外（タイトル・URLで判定）
         if (isIllustration([], title, imgUrl)) continue
+        if (isHumanOnly(title)) continue
         posts.push({
           id: `reddit_${post.id}`,
           sourceUrl: `https://reddit.com${post.permalink}`,
@@ -249,7 +268,7 @@ serve(async (req) => {
       const photos = await fetchTumblr(tag, 4)
       for (let i = 0; i < photos.length; i++) {
         posts.push({
-          id: `tumblr_${animalType}_${tag.replace(/\s/g, '_')}_${i}_${Date.now()}`,
+          id: `tumblr_${photos[i].url.split('/').pop()?.split('?')[0].replace(/\W/g, '_').slice(-40) ?? i}`,
           sourceUrl: photos[i].postUrl,
           thumbnailUrl: photos[i].url,
           animalType,
@@ -268,12 +287,12 @@ serve(async (req) => {
   // ③ Giphy GIF
   const giphyConfig = giphyQueryMap[animalType] ?? giphyQueryMap['mixed']
   try {
-    const gifUrls = await fetchGiphy(giphyConfig.query, 4)
-    for (let i = 0; i < gifUrls.length; i++) {
+    const gifItems = await fetchGiphy(giphyConfig.query, 4)
+    for (let i = 0; i < gifItems.length; i++) {
       posts.push({
-        id: `giphy_${animalType}_${i}_${Date.now()}`,
+        id: `giphy_${gifItems[i].id || `${animalType}_${i}`}`,
         sourceUrl: 'https://giphy.com',
-        thumbnailUrl: gifUrls[i],
+        thumbnailUrl: gifItems[i].url,
         animalType,
         tags: giphyConfig.tags,
         calmScore: 0.85,

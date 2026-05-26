@@ -199,8 +199,9 @@ Future<void> _fetchDogApi(List<VideoPost> out) async {
     if (res.statusCode != 200) return;
     final List images = jsonDecode(res.body)['message'];
     for (int i = 0; i < images.length; i++) {
+      final dogFilename = (images[i] as String).split('/').last.split('.').first;
       out.add(VideoPost(
-        id: 'dog_${i}_$ts', sourceUrl: images[i], thumbnailUrl: images[i],
+        id: 'dog_$dogFilename', sourceUrl: images[i], thumbnailUrl: images[i],
         animalType: AnimalType.dog,
         tags: _dogTagsFromUrl(images[i] as String),
         calmScore: 0.80 + (i % 5) * 0.03,
@@ -217,8 +218,9 @@ Future<void> _fetchShibe(List<VideoPost> out) async {
     if (res.statusCode != 200) return;
     final List images = jsonDecode(res.body);
     for (int i = 0; i < images.length; i++) {
+      final shibeFilename = (images[i] as String).split('/').last.split('.').first;
       out.add(VideoPost(
-        id: 'shibe_$i', sourceUrl: images[i], thumbnailUrl: images[i],
+        id: 'shibe_$shibeFilename', sourceUrl: images[i], thumbnailUrl: images[i],
         animalType: AnimalType.dog,
         tags: const ['柴犬', 'もふもふ', 'りりしい'],
         calmScore: 0.90, soundLevel: 0.05, mood: 'healing',
@@ -234,8 +236,9 @@ Future<void> _fetchFox(List<VideoPost> out) async {
       final res = await http.get(Uri.parse('https://randomfox.ca/floof/'));
       if (res.statusCode != 200) return;
       final data = jsonDecode(res.body);
+      final foxFilename = (data['image'] as String).split('/').last.split('.').first;
       out.add(VideoPost(
-        id: 'fox_${DateTime.now().microsecondsSinceEpoch}',
+        id: 'fox_$foxFilename',
         sourceUrl: data['image'], thumbnailUrl: data['image'],
         animalType: AnimalType.smallAnimal,
         tags: const ['キツネ', 'ふわふわ', 'おだやか'],
@@ -281,8 +284,13 @@ Future<void> _fetchGiphy(List<VideoPost> out) async {
             ?? images?['fixed_height']?['url']  // フォールバック
             ?? '';
         if (gifUrl.isEmpty) continue;
+        // Giphy URL の第2階層パスが安定したGIF ID
+        final giphyParts = gifUrl.split('/');
+        final giphyId = giphyParts.length >= 2
+            ? giphyParts[giphyParts.length - 2]
+            : gifUrl.hashCode.abs().toString();
         out.add(VideoPost(
-          id: 'giphy_${s.$1.replaceAll(' ', '_')}_$i',
+          id: 'giphy_$giphyId',
           sourceUrl: 'https://giphy.com',
           thumbnailUrl: gifUrl,
           animalType: s.$2,

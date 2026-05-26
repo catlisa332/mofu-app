@@ -58,6 +58,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget build(BuildContext context) {
     final prefsAsync = ref.watch(preferencesProvider);
     final feedAsync = ref.watch(feedProvider);
+    final todayMood = ref.watch(todayMoodProvider);
     final dislikedAsync = ref.watch(dislikeProvider);
 
     final isTired = prefsAsync.valueOrNull?.isTiredMode ?? false;
@@ -126,6 +127,31 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   ...favPosts.take(favCount),
                   ...otherPosts.take(filtered.length - favCount),
                 ]..shuffle();
+              }
+
+              // ③ 今日の気分でフィルター・並べ替え
+              switch (todayMood) {
+                case TodayMood.healing:
+                  // 穏やか順（デフォルト）
+                  filtered.sort((a, b) => b.calmScore.compareTo(a.calmScore));
+                case TodayMood.laughing:
+                  // GIF・動きのあるコンテンツを優先
+                  filtered.sort((a, b) {
+                    if (a.isGif && !b.isGif) return -1;
+                    if (!a.isGif && b.isGif) return 1;
+                    return 0;
+                  });
+                case TodayMood.spacing:
+                  // 非常に穏やか・静止画のみ
+                  filtered = filtered
+                      .where((p) => p.calmScore > 0.84 && !p.isGif)
+                      .toList()
+                    ..sort((a, b) => b.calmScore.compareTo(a.calmScore));
+                case TodayMood.tired:
+                  // おやすみモードと同じく安全なコンテンツのみ
+                  filtered = filtered.where((p) => p.isSafeForTiredMode).toList();
+                case null:
+                  break;
               }
 
               if (filtered.isEmpty) {

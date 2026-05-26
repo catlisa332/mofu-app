@@ -18,9 +18,7 @@ class SettingsScreen extends ConsumerWidget {
     final prefsAsync = ref.watch(preferencesProvider);
 
     return Scaffold(
-      backgroundColor: MofuColors.cream,
       appBar: AppBar(
-        backgroundColor: MofuColors.cream,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text('設定',
@@ -37,7 +35,7 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             // 好きな動物
-            _section('好きな動物', [
+            _section(context, '好きな動物', [
               _AnimalSelector(
                 selected: prefs.favoriteAnimals.toSet(),
                 onChanged: (set) => ref
@@ -48,7 +46,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 苦手なもの
-            _section('苦手なもの（表示しない）', [
+            _section(context, '苦手なもの（表示しない）', [
               _AvoidTagSelector(
                 selected: prefs.avoidTags.toSet(),
                 onChanged: (set) => ref
@@ -59,12 +57,13 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 表示モード
-            _section('表示モード', [
+            _section(context, '表示モード', [
               SwitchListTile(
                 title: const Text('夜モード'),
                 subtitle: const Text('色をおだやかに'),
                 value: prefs.isNightMode,
-                activeColor: MofuColors.mossGreen,
+                activeThumbColor: MofuColors.mossGreen,
+                activeTrackColor: MofuColors.mossGreen.withAlpha(80),
                 onChanged: (v) =>
                     ref.read(preferencesProvider.notifier).setNightMode(v),
               ),
@@ -72,14 +71,16 @@ class SettingsScreen extends ConsumerWidget {
                 title: const Text('心が疲れてる日モード'),
                 subtitle: const Text('超おだやかなコンテンツのみ'),
                 value: prefs.isTiredMode,
-                activeColor: MofuColors.softLavender,
+                activeThumbColor: MofuColors.softLavender,
+                activeTrackColor: MofuColors.softLavender.withAlpha(80),
                 onChanged: (v) =>
                     ref.read(preferencesProvider.notifier).setTiredMode(v),
               ),
               SwitchListTile(
                 title: const Text('Calm Scoreを表示'),
                 value: prefs.showCalmScore,
-                activeColor: MofuColors.warmTan,
+                activeThumbColor: MofuColors.warmTan,
+                activeTrackColor: MofuColors.warmTan.withAlpha(80),
                 onChanged: (v) => ref
                     .read(preferencesProvider.notifier)
                     .save(prefs.copyWith(showCalmScore: v)),
@@ -88,12 +89,13 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 音声
-            _section('音声', [
+            _section(context, '音声', [
               SwitchListTile(
                 title: const Text('ミュートを優先'),
                 subtitle: const Text('音量の大きいコンテンツを下げる'),
                 value: prefs.isMutePreferred,
-                activeColor: MofuColors.warmTan,
+                activeThumbColor: MofuColors.warmTan,
+                activeTrackColor: MofuColors.warmTan.withAlpha(80),
                 onChanged: (v) => ref
                     .read(preferencesProvider.notifier)
                     .save(prefs.copyWith(isMutePreferred: v)),
@@ -102,7 +104,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 通知
-            _section('通知', [
+            _section(context, '通知', [
               ListTile(
                 leading: const Text('🔔', style: TextStyle(fontSize: 20)),
                 title: const Text('今日のモフ通知'),
@@ -135,7 +137,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // アカウント
-            _section('アカウント', [
+            _section(context, 'アカウント', [
               ListTile(
                 leading: const Text('☁️', style: TextStyle(fontSize: 20)),
                 title: const Text('ログイン'),
@@ -154,7 +156,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // その他
-            _section('その他', [
+            _section(context, 'その他', [
               ListTile(
                 leading: const Text('🔄', style: TextStyle(fontSize: 20)),
                 title: const Text('最初からやり直す'),
@@ -209,23 +211,27 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _section(String title, List<Widget> children) {
+  Widget _section(BuildContext context, String title, List<Widget> children) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF2D2620) : Colors.white;
+    final labelColor = isDark ? const Color(0xFFAB8E7A) : MofuColors.textLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
           child: Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: MofuColors.textLight,
+                color: labelColor,
                 letterSpacing: 0.5,
               )),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(children: children),
@@ -315,6 +321,11 @@ class _AnimalSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselBg = isDark ? const Color(0xFF3A302B) : MofuColors.cream;
+    final unselBorder = isDark ? const Color(0xFF4A3D32) : MofuColors.divider;
+    final unselText = isDark ? const Color(0xFFEDD9C5) : MofuColors.textDark;
+
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Wrap(
@@ -332,10 +343,10 @@ class _AnimalSelector extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isSel ? MofuColors.warmTan : MofuColors.cream,
+                color: isSel ? MofuColors.warmTan : unselBg,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isSel ? MofuColors.warmTan : MofuColors.divider,
+                  color: isSel ? MofuColors.warmTan : unselBorder,
                 ),
               ),
               child: Row(
@@ -346,7 +357,7 @@ class _AnimalSelector extends StatelessWidget {
                   Text(item.$3,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isSel ? Colors.white : MofuColors.textDark,
+                        color: isSel ? Colors.white : unselText,
                         fontWeight: isSel ? FontWeight.w600 : FontWeight.w400,
                       )),
                 ],
@@ -368,6 +379,11 @@ class _AvoidTagSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselBg = isDark ? const Color(0xFF3A302B) : MofuColors.cream;
+    final unselBorder = isDark ? const Color(0xFF4A3D32) : MofuColors.divider;
+    final unselText = isDark ? const Color(0xFFEDD9C5) : MofuColors.textDark;
+
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Wrap(
@@ -383,20 +399,18 @@ class _AvoidTagSelector extends StatelessWidget {
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
-                color: isSel ? const Color(0xFFE07B5A) : MofuColors.cream,
+                color: isSel ? const Color(0xFFE07B5A) : unselBg,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isSel
-                      ? const Color(0xFFE07B5A)
-                      : MofuColors.divider,
+                  color: isSel ? const Color(0xFFE07B5A) : unselBorder,
                 ),
               ),
               child: Text(item.$2,
                   style: TextStyle(
                     fontSize: 13,
-                    color: isSel ? Colors.white : MofuColors.textDark,
+                    color: isSel ? Colors.white : unselText,
                   )),
             ),
           );

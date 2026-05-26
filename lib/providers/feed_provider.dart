@@ -39,14 +39,19 @@ bool _isHighQualityUrl(String url) {
   final lower = url.toLowerCase();
   // 明らかに小さいサイズを示すパターンを除外
   final badPatterns = [
-    '_t.jpg', '_t.jpeg', '_t.png',     // thumbnail suffix
+    '_t.jpg', '_t.jpeg', '_t.png',          // thumbnail suffix
     '/thumb/', '/thumbnail/', '/small/',
-    '50x50', '60x60', '75x75', '100x', '120x',
-    'width=50', 'width=60', 'width=75', 'width=100',
-    'h=50', 'h=60', 'h=75', 'h=100',
-    'sq75', 'sq100',                   // Imgur square thumbnails
-    'mqdefault',                       // YouTube medium quality (320x180)
-    'sddefault',                       // YouTube SD (640x480) - OK だが念のため残す
+    '/mini/', '/preview/', '/tiny/',
+    '_small.', '_mini.', '_thumb.',
+    '50x50', '60x60', '75x75', '100x100',
+    '100x', '120x', '150x', '200x', '240x', // 幅の上限を拡大
+    'width=50', 'width=60', 'width=75',
+    'width=100', 'width=150', 'width=200',
+    'h=50', 'h=60', 'h=75',
+    'h=100', 'h=150', 'h=200',
+    'sq75', 'sq100', 'sq160',               // Imgur square thumbnails
+    'mqdefault',                             // YouTube medium quality (320x180)
+    'sddefault',                             // YouTube SD
   ];
   return !badPatterns.any(lower.contains);
 }
@@ -147,8 +152,11 @@ Future<void> _fetchCatApi(List<VideoPost> out) async {
     for (int i = 0; i < data.length; i++) {
       final w = (data[i]['width'] as num?)?.toInt() ?? 0;
       final h = (data[i]['height'] as num?)?.toInt() ?? 0;
-      // サイズが判明している場合のみフィルター（どちらか長辺が300px以上）
-      if (w > 0 && h > 0 && w < 300 && h < 300) continue;
+      // 短辺 400px 未満は除外（モバイル表示で粗く見える）
+      if (w > 0 && h > 0) {
+        final shortSide = w < h ? w : h;
+        if (shortSide < 400) continue;
+      }
       out.add(VideoPost(
         id: 'cat_${data[i]['id']}',
         sourceUrl: data[i]['url'], thumbnailUrl: data[i]['url'],
@@ -278,7 +286,7 @@ Future<void> _fetchGiphy(List<VideoPost> out) async {
         // 幅チェック：サイズが判明して明らかに小さい場合のみスキップ
         final w = int.tryParse(
             images?['fixed_width']?['width']?.toString() ?? '0') ?? 0;
-        if (w > 0 && w < 200) continue; // 明らかに極小のみ除外
+        if (w > 0 && w < 400) continue; // 400px未満は除外
         final gifUrl = images?['fixed_width']?['url']
             ?? images?['original_still']?['url']
             ?? images?['fixed_height']?['url']  // フォールバック
@@ -345,3 +353,6 @@ Future<void> _fetchYouTube(List<VideoPost> out) async {
 
 final feedProvider =
     AsyncNotifierProvider<FeedNotifier, List<VideoPost>>(FeedNotifier.new);
+
+/// ステータスバータップで最上部へスクロールするコールバック（FeedScreen が登録）
+final feedScrollToTopProvider = StateProvider<VoidCallback?>((ref) => null);

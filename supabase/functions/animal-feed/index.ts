@@ -239,11 +239,14 @@ serve(async (req) => {
         if (!isImage(imgUrl)) continue
         if (!isHighQuality(imgUrl)) continue
         if (post.over_18) continue
-        if ((post.score ?? 0) < 50) continue
+        if ((post.score ?? 0) < 100) continue
         const title = post.title ?? ''
         // イラスト・アート投稿を除外（タイトル・URLで判定）
         if (isIllustration([], title, imgUrl)) continue
         if (isHumanOnly(title)) continue
+        // 画像サイズチェック（プレビューデータがある場合）
+        const preview = post.preview?.images?.[0]?.source
+        if (preview && (preview.width ?? 0) > 0 && (preview.width ?? 0) < 640) continue
         posts.push({
           id: `reddit_${post.id}`,
           sourceUrl: `https://reddit.com${post.permalink}`,

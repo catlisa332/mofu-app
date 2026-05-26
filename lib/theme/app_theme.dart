@@ -173,12 +173,99 @@ class AppTheme {
     );
   }
 
-  static ThemeData get night => ThemeData(
-    useMaterial3: true,
-    colorScheme: const ColorScheme.dark(
-      primary: MofuColors.accent,
-      surface: Color(0xFF1C1C1E),
-    ),
-    scaffoldBackgroundColor: const Color(0xFF1C1C1E),
-  );
+  static ThemeData get night {
+    // 温かみのある深いブラウン系ナイトパレット
+    const bg     = Color(0xFF1E1A16); // 最も暗い背景
+    const cardBg = Color(0xFF2D2620); // カード背景（少し明るい）
+    const text1  = Color(0xFFEDD9C5); // プライマリテキスト（ウォームクリーム）
+    const text2  = Color(0xFFAB8E7A); // セカンダリテキスト（ミュートなウォーム）
+    const border = Color(0xFF4A3D32); // ボーダー・区切り線
+
+    final base = GoogleFonts.notoSansJpTextTheme();
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: const ColorScheme.dark(
+        primary:   MofuColors.accent,
+        secondary: MofuColors.systemGreen,
+        surface:   bg,
+        onSurface: text1,
+        outline:   border,
+      ),
+      scaffoldBackgroundColor: bg,
+
+      // ─── Typography（ライトと同じ構造、夜色で上書き）────────────
+      textTheme: base.copyWith(
+        displayLarge:   GoogleFonts.notoSansJp(fontSize: 34, fontWeight: FontWeight.w700, color: text1, letterSpacing: -0.5),
+        displayMedium:  GoogleFonts.notoSansJp(fontSize: 28, fontWeight: FontWeight.w700, color: text1, letterSpacing: -0.3),
+        displaySmall:   GoogleFonts.notoSansJp(fontSize: 22, fontWeight: FontWeight.w700, color: text1),
+        headlineMedium: GoogleFonts.notoSansJp(fontSize: 17, fontWeight: FontWeight.w600, color: text1),
+        bodyLarge:      GoogleFonts.notoSansJp(fontSize: 17, fontWeight: FontWeight.w400, color: text1),
+        bodyMedium:     GoogleFonts.notoSansJp(fontSize: 16, fontWeight: FontWeight.w400, color: text1),
+        bodySmall:      GoogleFonts.notoSansJp(fontSize: 15, fontWeight: FontWeight.w400, color: text2),
+        labelSmall:     GoogleFonts.notoSansJp(fontSize: 12, fontWeight: FontWeight.w400, color: text2),
+      ),
+
+      // ─── AppBar ──────────────────────────────────────────────
+      appBarTheme: const AppBarTheme(
+        backgroundColor: bg,
+        foregroundColor: text1,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        shadowColor: border,
+        centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+        ),
+      ),
+
+      // ─── Card ────────────────────────────────────────────────
+      cardTheme: const CardThemeData(
+        color: cardBg,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+
+      // ─── ListTile / SwitchListTile ───────────────────────────
+      listTileTheme: const ListTileThemeData(
+        tileColor: cardBg,
+        textColor: text1,
+        subtitleTextStyle: TextStyle(color: text2, fontSize: 13),
+        iconColor: text2,
+      ),
+
+      // ─── ElevatedButton ──────────────────────────────────────
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: MofuColors.accent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(14)),
+          ),
+          elevation: 0,
+          textStyle: GoogleFonts.notoSansJp(fontSize: 17, fontWeight: FontWeight.w600),
+        ),
+      ),
+
+      // ─── Divider ─────────────────────────────────────────────
+      dividerTheme: const DividerThemeData(
+        color: border,
+        thickness: 0.5,
+        space: 0,
+      ),
+
+      // ─── SnackBar ────────────────────────────────────────────
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: cardBg,
+        contentTextStyle: GoogleFonts.notoSansJp(color: text1, fontSize: 14),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 }

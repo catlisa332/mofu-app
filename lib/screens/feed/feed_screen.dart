@@ -36,7 +36,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   final _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    // HomeScreen のステータスバー tap-overlay に渡すコールバックを登録
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(feedScrollToTopProvider.notifier).state = _scrollToTop;
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    ref.read(feedScrollToTopProvider.notifier).state = null;
     _scrollController.dispose();
     super.dispose();
   }
@@ -61,13 +73,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     final isTired = prefsAsync.valueOrNull?.isTiredMode ?? false;
     final dislikedIds = dislikedAsync.valueOrNull ?? {};
     final categoryFilter = ref.watch(categoryFilterProvider);
-    final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-      Scaffold(
-      backgroundColor: MofuColors.systemBackground,
+    return Scaffold(
       body: NotificationListener<ScrollEndNotification>(
         onNotification: (n) {
           // PC(Web) のみ：末尾近くで自動追加読み込み
@@ -125,20 +132,16 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   .where((p) => categoryFilter == null || p.animalType == categoryFilter)
                   .toList();
 
-              // ② 好きな動物を70%優先（仕様書Section 16）
-              if (favoriteAnimals.isNotEmpty) {
+              // ② 好きな動物を優先（カテゴリー指定中はスキップ：ユーザーが明示的に選択済み）
+              if (favoriteAnimals.isNotEmpty && categoryFilter == null) {
                 final favPosts = filtered
                     .where((p) => favoriteAnimals.contains(p.animalType))
-                    .toList();
+                    .toList()..shuffle();
                 final otherPosts = filtered
                     .where((p) => !favoriteAnimals.contains(p.animalType))
-                    .toList();
-                // 70% 好き / 30% その他
-                final favCount = (filtered.length * 0.7).round();
-                filtered = [
-                  ...favPosts.take(favCount),
-                  ...otherPosts.take(filtered.length - favCount),
-                ]..shuffle();
+                    .toList()..shuffle();
+                // 全件を保持しつつ好きな動物を先頭に配置（件数を減らさない）
+                filtered = [...favPosts, ...otherPosts];
               }
 
               // ③ 今日の気分でフィルター・並べ替え
@@ -258,18 +261,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         ),
       ),
       ), // NotificationListener
-    ),     // Scaffold
-      // ── ステータスバー領域タップで最上部へ（モバイル）──────────
-      if (!kIsWeb && statusBarHeight > 0)
-        Positioned(
-          top: 0, left: 0, right: 0,
-          height: statusBarHeight,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _scrollToTop,
-          ),
-        ),
-      ], // Stack
     );
   }
 }

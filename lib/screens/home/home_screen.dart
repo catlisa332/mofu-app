@@ -1,6 +1,8 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/feed_provider.dart';
 import '../../theme/app_theme.dart';
 import '../favorites/favorites_screen.dart';
 import '../feed/feed_screen.dart';
@@ -15,8 +17,10 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tabIndex = ref.watch(_tabIndexProvider);
+    final scrollToTop = ref.watch(feedScrollToTopProvider);
+    final topPad = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
+    final scaffold = Scaffold(
       extendBody: true, // コンテンツをタブバーの下まで延ばす（iOS スタイル）
       body: IndexedStack(
         index: tabIndex,
@@ -32,6 +36,26 @@ class HomeScreen extends ConsumerWidget {
         onTap: (i) => ref.read(_tabIndexProvider.notifier).state = i,
       ),
     );
+
+    // フィードタブ表示中かつステータスバー領域がある場合のみ透明タップ領域を重ねる
+    // HomeScreen レベルなので top: 0 が画面最上部（物理ステータスバー位置）と一致する
+    if (!kIsWeb && tabIndex == 0 && topPad > 0 && scrollToTop != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          scaffold,
+          Positioned(
+            top: 0, left: 0, right: 0,
+            height: topPad,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: scrollToTop,
+            ),
+          ),
+        ],
+      );
+    }
+    return scaffold;
   }
 }
 

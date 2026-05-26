@@ -58,7 +58,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget build(BuildContext context) {
     final prefsAsync = ref.watch(preferencesProvider);
     final feedAsync = ref.watch(feedProvider);
-    final todayMood = ref.watch(todayMoodProvider);
     final dislikedAsync = ref.watch(dislikeProvider);
 
     final isTired = prefsAsync.valueOrNull?.isTiredMode ?? false;
@@ -76,7 +75,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-          _AppBar(isTired: isTired, todayMood: todayMood),
+          _AppBar(isTired: isTired),
           if (isTired) const _TiredModeBanner(),
           _LeafHintBanner(ref: ref),
           if (!isTired) const DailyPickCard(),
@@ -259,9 +258,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
 class _AppBar extends ConsumerWidget {
   final bool isTired;
-  final TodayMood? todayMood;
 
-  const _AppBar({required this.isTired, required this.todayMood});
+  const _AppBar({required this.isTired});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -313,14 +311,15 @@ class _AppBar extends ConsumerWidget {
           onTap: () => MoodSelectorSheet.show(context),
           child: Container(
             margin: const EdgeInsets.only(right: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: MofuColors.secondarySystemBackground,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(
-              _moodEmoji(todayMood),
-              style: const TextStyle(fontSize: 17),
+            child: const Icon(
+              Icons.spa_rounded,
+              size: 20,
+              color: MofuColors.accent,
             ),
           ),
         ),
@@ -338,15 +337,6 @@ class _AppBar extends ConsumerWidget {
     );
   }
 
-  String _moodEmoji(TodayMood? mood) {
-    return switch (mood) {
-      TodayMood.healing => '🌸',
-      TodayMood.laughing => '😄',
-      TodayMood.spacing => '😶‍🌫️',
-      TodayMood.tired => '🫂',
-      null => '🌸',
-    };
-  }
 }
 
 // 🌿 ヒントバナー（初回のみ表示）

@@ -1,7 +1,18 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/video_post.dart';
 import '../theme/app_theme.dart';
+
+// PC(Web) でマウスドラッグによる横スクロールを有効にする
+class _MouseDragScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
+}
 
 // 選択中のカテゴリ（nullは全部）
 final categoryFilterProvider = StateProvider<AnimalType?>((ref) => null);
@@ -27,7 +38,9 @@ class CategoryFilter extends ConsumerWidget {
     return SliverToBoxAdapter(
       child: SizedBox(
         height: 44,
-        child: ListView.builder(
+        child: ScrollConfiguration(
+          behavior: _MouseDragScrollBehavior(),
+          child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           itemCount: _categories.length,
@@ -67,6 +80,7 @@ class CategoryFilter extends ConsumerWidget {
             );
           },
         ),
+        ), // ScrollConfiguration
       ),
     );
   }

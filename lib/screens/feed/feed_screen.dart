@@ -25,11 +25,34 @@ final _hintShownProvider = FutureProvider<bool>((ref) async {
 
 final _hintVisibleProvider = StateProvider<bool>((ref) => true);
 
-class FeedScreen extends ConsumerWidget {
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final prefsAsync = ref.watch(preferencesProvider);
     final feedAsync = ref.watch(feedProvider);
     final todayMood = ref.watch(todayMoodProvider);
@@ -38,8 +61,12 @@ class FeedScreen extends ConsumerWidget {
     final isTired = prefsAsync.valueOrNull?.isTiredMode ?? false;
     final dislikedIds = dislikedAsync.valueOrNull ?? {};
     final categoryFilter = ref.watch(categoryFilterProvider);
+    final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+      Scaffold(
       backgroundColor: MofuColors.systemBackground,
       body: NotificationListener<ScrollEndNotification>(
         onNotification: (n) {
@@ -58,9 +85,10 @@ class FeedScreen extends ConsumerWidget {
         displacement: 60,
         onRefresh: () => ref.read(feedProvider.notifier).refresh(),
         child: CustomScrollView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-          _AppBar(isTired: isTired),
+          _AppBar(isTired: isTired, onLogoTap: _scrollToTop),
           if (isTired) const _TiredModeBanner(),
           _LeafHintBanner(ref: ref),
           if (!isTired) const DailyPickCard(),
@@ -230,14 +258,27 @@ class FeedScreen extends ConsumerWidget {
         ),
       ),
       ), // NotificationListener
+    ),     // Scaffold
+      // ── ステータスバー領域タップで最上部へ（モバイル）──────────
+      if (!kIsWeb && statusBarHeight > 0)
+        Positioned(
+          top: 0, left: 0, right: 0,
+          height: statusBarHeight,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _scrollToTop,
+          ),
+        ),
+      ], // Stack
     );
   }
 }
 
 class _AppBar extends ConsumerWidget {
   final bool isTired;
+  final VoidCallback? onLogoTap;
 
-  const _AppBar({required this.isTired});
+  const _AppBar({required this.isTired, this.onLogoTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -252,7 +293,10 @@ class _AppBar extends ConsumerWidget {
       scrolledUnderElevation: 0.5,
       titleSpacing: 20,
       toolbarHeight: 52,
-      title: Row(
+      title: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onLogoTap,
+        child: Row(
         children: [
           Text(
             'MOFU',
@@ -282,6 +326,7 @@ class _AppBar extends ConsumerWidget {
             ),
           ],
         ],
+        ), // GestureDetector(onTap: onLogoTap)
       ),
       actions: [
         // 気分ボタン

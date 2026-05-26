@@ -305,12 +305,33 @@ Future<void> _fetchGiphy(List<VideoPost> out) async {
 }
 
 class FeedNotifier extends AsyncNotifier<List<VideoPost>> {
+  bool _loadingMore = false;
+
   @override
   Future<List<VideoPost>> build() async => _fetchAll();
 
   Future<void> refresh() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _fetchAll(forceRefresh: true));
+  }
+
+  /// PC(Web) 用：末尾に新しい投稿を追記（既出 ID は除外）
+  Future<void> loadMore() async {
+    if (_loadingMore) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    _loadingMore = true;
+    try {
+      final more = await _fetchAll(forceRefresh: true);
+      final seen = current.map((p) => p.id).toSet();
+      final fresh = more.where((p) => !seen.contains(p.id)).toList();
+      if (fresh.isNotEmpty) {
+        state = AsyncData([...current, ...fresh]);
+      }
+    } catch (_) {
+    } finally {
+      _loadingMore = false;
+    }
   }
 }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,7 +41,18 @@ class FeedScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: MofuColors.systemBackground,
-      body: RefreshIndicator(
+      body: NotificationListener<ScrollEndNotification>(
+        onNotification: (n) {
+          // PC(Web) のみ：末尾近くで自動追加読み込み
+          if (kIsWeb) {
+            final m = n.metrics;
+            if (m.pixels >= m.maxScrollExtent - 500) {
+              ref.read(feedProvider.notifier).loadMore();
+            }
+          }
+          return false;
+        },
+        child: RefreshIndicator(
         color: MofuColors.warmTan,
         backgroundColor: Colors.white,
         displacement: 60,
@@ -217,6 +229,7 @@ class FeedScreen extends ConsumerWidget {
         ],
         ),
       ),
+      ), // NotificationListener
     );
   }
 }

@@ -24,38 +24,11 @@ final _hintShownProvider = FutureProvider<bool>((ref) async {
 
 final _hintVisibleProvider = StateProvider<bool>((ref) => true);
 
-class FeedScreen extends ConsumerStatefulWidget {
+class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
 
   @override
-  ConsumerState<FeedScreen> createState() => _FeedScreenState();
-}
-
-class _FeedScreenState extends ConsumerState<FeedScreen> {
-  final _scrollController = ScrollController();
-  bool _showFab = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final pos = _scrollController.position;
-    final nearBottom = pos.pixels >= pos.maxScrollExtent - 350;
-    if (nearBottom != _showFab) setState(() => _showFab = nearBottom);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final prefsAsync = ref.watch(preferencesProvider);
     final feedAsync = ref.watch(feedProvider);
     final todayMood = ref.watch(todayMoodProvider);
@@ -73,7 +46,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         displacement: 60,
         onRefresh: () => ref.read(feedProvider.notifier).refresh(),
         child: CustomScrollView(
-          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
           _AppBar(isTired: isTired),
@@ -243,39 +215,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           const SliverToBoxAdapter(child: InstallBanner()),
           const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
         ],
-        ),
-      ),
-      // タブバー高さ(49) + デバイスセーフエリア分だけ上にずらす
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: AnimatedOpacity(
-        opacity: _showFab ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 250),
-        child: IgnorePointer(
-          ignoring: !_showFab,
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: 49 + MediaQuery.of(context).padding.bottom,
-            ),
-            child: FloatingActionButton.extended(
-              onPressed: () {
-                ref.read(feedProvider.notifier).refresh();
-                setState(() => _showFab = false);
-                _scrollController.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                );
-              },
-              backgroundColor: MofuColors.accent,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              extendedPadding: const EdgeInsets.symmetric(horizontal: 24),
-              shape: const StadiumBorder(),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('もっと見る',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            ),
-          ),
         ),
       ),
     );

@@ -76,13 +76,39 @@ const ART_TAGS = new Set([
   'animation', 'gif art', 'art blog',
 ])
 
-// イラスト系ドメイン
+// イラスト系・アート販売・ストックフォトドメイン
 const ART_DOMAINS = [
+  // イラスト・デジタルアート
   'deviantart.com', 'artstation.com', 'pixiv.net', 'furaffinity.net',
   'weasyl.com', 'newgrounds.com', 'e621.net',
+  // アート販売サイト
+  'fineartamerica.com', 'pixels.com',   // Fine Art America（pixels.com は同系列）
+  'society6.com', 'redbubble.com',
+  'saatchiart.com', 'saatchi-gallery.com',
+  'zazzle.com', 'displate.com', 'inprnt.com',
+  'printful.com', 'merch.ly',
+  // ストックフォト（商用・透かし付き）
+  'shutterstock.com', 'gettyimages.com', 'istockphoto.com',
+  'alamy.com', 'dreamstime.com', '123rf.com',
+  'depositphotos.com', 'pond5.com',
+  'stock.adobe.com', 'adobestock.com',
+  'bigstockphoto.com', 'canstockphoto.com',
+  'stocksy.com', 'eyeem.com',
 ]
 
-// タグ・キャプション・URLでイラストかどうか判定
+// ストックフォト的URLパターン（透かし・プレビュー）
+function isStockPhotoUrl(url: string): boolean {
+  const lower = url.toLowerCase()
+  const stockPatterns = [
+    '/watermark/', 'watermarked', '_wm.', '-wm.',
+    '/comp/', '/comps/',          // ストックフォトのコンプ画像
+    '/preview/stock', 'stock-photo',
+    'for-sale', 'buy-print', 'art-print',
+  ]
+  return stockPatterns.some(p => lower.includes(p))
+}
+
+// タグ・キャプション・URLでイラスト/アート販売かどうか判定
 function isIllustration(
   tags: string[],
   caption: string,
@@ -96,11 +122,16 @@ function isIllustration(
   const artPhrases = [
     'illustration', 'digital art', 'my art', 'painted by', 'drawn by',
     'art by', 'commission', 'deviantart', 'artstation',
+    'available for sale', 'buy print', 'art print', 'wall art',
+    'fine art', 'stock photo', 'shutterstock', 'getty images',
   ]
   if (artPhrases.some(k => lower.includes(k))) return true
 
-  // ③ イラスト系ドメイン
+  // ③ アート・ストックフォト系ドメイン
   if (ART_DOMAINS.some(d => url.includes(d))) return true
+
+  // ④ ストックフォト的URLパターン
+  if (isStockPhotoUrl(url)) return true
 
   return false
 }

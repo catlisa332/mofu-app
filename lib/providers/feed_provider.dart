@@ -33,6 +33,29 @@ List<String> _dogTagsFromUrl(String url) {
   return ['犬', 'おだやか', 'かわいい'];
 }
 
+// アート販売・ストックフォトドメインを弾くフィルター
+const _artSaleDomains = [
+  'fineartamerica.com', 'pixels.com',
+  'society6.com', 'redbubble.com',
+  'saatchiart.com', 'zazzle.com', 'displate.com',
+  'shutterstock.com', 'gettyimages.com', 'istockphoto.com',
+  'alamy.com', 'dreamstime.com', '123rf.com',
+  'depositphotos.com', 'stock.adobe.com', 'adobestock.com',
+  'bigstockphoto.com', 'stocksy.com', 'eyeem.com',
+];
+
+const _stockPhotoPatterns = [
+  '/watermark/', 'watermarked', '_wm.', '/comp/',
+  'stock-photo', 'for-sale', 'buy-print', 'art-print',
+];
+
+bool _isArtOrStockUrl(String url) {
+  final lower = url.toLowerCase();
+  if (_artSaleDomains.any(lower.contains)) return true;
+  if (_stockPhotoPatterns.any(lower.contains)) return true;
+  return false;
+}
+
 // 低解像度URLを弾くフィルター
 bool _isHighQualityUrl(String url) {
   if (url.isEmpty) return false;
@@ -95,11 +118,13 @@ Future<List<VideoPost>> _fetchAll({bool forceRefresh = false}) async {
 
   if (posts.isEmpty) return [];
 
-  // 重複除去 + 低解像度URLフィルター
+  // 重複除去 + 低解像度URLフィルター + アート販売・ストックフォト除外
   final seen = <String>{};
   final unique = posts
       .where((p) => seen.add(p.id))
       .where((p) => _isHighQualityUrl(p.thumbnailUrl))
+      .where((p) => !_isArtOrStockUrl(p.thumbnailUrl))
+      .where((p) => !_isArtOrStockUrl(p.sourceUrl))
       .toList()
     ..shuffle();
 

@@ -70,6 +70,16 @@ class _InstallBannerState extends State<InstallBanner> {
           ),
           child: Row(
             children: [
+              // ✕ を左端に配置（右端の FAB と被らないよう）
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _dismiss,
+                child: const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 8, 10, 8),
+                  child: Icon(Icons.close_rounded,
+                      size: 16, color: Color(0xFFB08070)),
+                ),
+              ),
               const Text('📱', style: TextStyle(fontSize: 22)),
               const SizedBox(width: 10),
               const Expanded(
@@ -89,15 +99,6 @@ class _InstallBannerState extends State<InstallBanner> {
                           color: Color(0xFFB08070),
                         )),
                   ],
-                ),
-              ),
-              GestureDetector(
-                onTap: _dismiss,
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text('✕',
-                      style: TextStyle(
-                          fontSize: 14, color: Color(0xFFB08070))),
                 ),
               ),
             ],
